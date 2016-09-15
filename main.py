@@ -30,7 +30,9 @@ class MainScreen(Screen):
 
         for q in cached_questions:
             container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
-            container.add_widget(Label(text=q['title'], pos_hint={'center_x': 0.3, 'center_y': 0.8}))
+            title = Label(text='[ref=%s]%s[/ref]' % (q['title'], q['title']), markup=True)
+            title.bind(on_ref_press=partial(self.select_question, q))
+            container.add_widget(title)
             container.add_widget(Label(text=q['like'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
             container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
             container.add_widget(Label(text=q['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
@@ -39,9 +41,10 @@ class MainScreen(Screen):
         root.add_widget(body)
         self.add_widget(root)
 
-    def set_selected_question(self, question):
+    def select_question(self, *args):
         global selected_question
-        selected_question = question
+        selected_question = args[0]
+        screen_manager.switch_to(QuestionScreen())
 
 
 class QuestionScreen(Screen):

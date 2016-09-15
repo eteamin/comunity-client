@@ -1,22 +1,65 @@
-from kivy.uix.boxlayout import BoxLayout
+from functools import partial
+
+from kivy.core.window import Window
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.button import Button
+from kivy.uix.label import Label
 from kivy.app import App
+from kivy.uix.relativelayout import RelativeLayout
+from kivy.uix.scrollview import ScrollView
+
+from request_handler import get_questions
+from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 
 
-class MainPage(BoxLayout):
+cached_questions = None
+selected_question = None
+screen_manager = ScreenManager(transition=SlideTransition())
+
+
+class MainScreen(Screen):
     def __init__(self):
-        super(MainPage, self).__init__()
-        self.add_widget(QuestionPage())
+        super(MainScreen, self).__init__()
+        root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+        global cached_questions
+        if not cached_questions:
+            cached_questions = get_questions()
+
+        body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+        body.bind(minimum_height=body.setter('height'))
+
+        for q in cached_questions:
+            container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
+            container.add_widget(Label(text=q['title'], pos_hint={'center_x': 0.3, 'center_y': 0.8}))
+            container.add_widget(Label(text=q['like'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
+            container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
+            container.add_widget(Label(text=q['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
+            body.add_widget(container)
+
+        root.add_widget(body)
+        self.add_widget(root)
+
+    def set_selected_question(self, question):
+        global selected_question
+        selected_question = question
 
 
-class QuestionPage(BoxLayout):
+class QuestionScreen(Screen):
+    if selected_question:
+        title = selected_question['title']
+        content = selected_question['content']
+        creation_time = selected_question['creation_time']
+        like = selected_question['like']
+        account_name = selected_question['account']['display_name']
+        tag = selected_question['tag']
+        answer = selected_question['answer']
+
+
+class NotificationScreen(Screen):
     pass
 
 
-class NotificationPage(BoxLayout):
-    pass
-
-
-class ProfilePage(BoxLayout):
+class ProfileScreen(Screen):
     pass
 
 
@@ -29,7 +72,8 @@ class CommunityApp(App):
         pass
 
     def build(self):
-        return MainPage()
+        screen_manager.add_widget(MainScreen())
+        return screen_manager
 
 
 if __name__ == '__main__':

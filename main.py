@@ -3,17 +3,21 @@ from functools import partial
 from kivy.core.window import Window
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
 from kivy.uix.label import Label
 from kivy.app import App
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
 
-from request_handler import get_questions
+from request_handler import get_questions, post_answer
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 
 
 cached_questions = None
 question = None
+user = {
+    'id': 1
+}
 screen_manager = ScreenManager(transition=SlideTransition())
 
 
@@ -48,6 +52,8 @@ class MainScreen(Screen):
 
 
 class QuestionScreen(Screen):
+    answer_text = ''
+
     def __init__(self):
         super(QuestionScreen, self).__init__()
         if question:
@@ -76,8 +82,32 @@ class QuestionScreen(Screen):
                 container.add_widget(Label(text=a['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
                 body.add_widget(container)
 
+            new_answer_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
+            answer_input = TextInput(
+                size_hint=(None, None),
+                size=(Window.width / 2, Window.height / 4),
+                pos_hint={'center_x': 0.5, 'center_y': 0.5}
+            )
+            answer_input.bind(text=self.set_answer_text)
+            submit_button = Button(
+                text='Submit',
+                size_hint=(None, None),
+                size=(Window.width / 10, Window.height / 10),
+                pos_hint={'center_x': 0.9, 'center_y': 0.3}
+            )
+            new_answer_container.add_widget(answer_input)
+            new_answer_container.add_widget(submit_button)
+            submit_button.bind(on_press=partial(self.submit_answer, user['id'], question['id']))
+            body.add_widget(new_answer_container)
+
             root.add_widget(body)
             self.add_widget(root)
+
+    def submit_answer(self, account_id, question_id, button):
+        post_answer(self.answer_text, account_id, question_id)
+
+    def set_answer_text(self, instance, value):
+        self.answer_text = value
 
 
 class NotificationScreen(Screen):

@@ -25,3 +25,7 @@ def get_likes(_id, _type):
 
 def get_tags():
     return get('%s/get/tags' % server_url).json()['tags']
+
+
+def get_notifications(account_id):
+    return get('%s/get/notifications/%s' % (server_url, account_id)).json()['notifications']

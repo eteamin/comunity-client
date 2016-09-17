@@ -9,11 +9,13 @@ from kivy.app import App
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
 
-from request_handler import get_questions, post_answer
+from request_handler import get_questions, post_answer, get_notifications
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 
 
+profile = None
 cached_questions = None
+cached_notifications = None
 question = None
 user = {
     'id': 1
@@ -111,11 +113,55 @@ class QuestionScreen(Screen):
 
 
 class NotificationScreen(Screen):
-    pass
+    def __init__(self):
+        super(NotificationScreen, self).__init__()
+
+        root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+        body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+        body.bind(minimum_height=body.setter('height'))
+        global cached_notifications
+        if not cached_notifications:
+            cached_notifications = get_notifications(user['id'])
+        for n in cached_notifications:
+            container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 10))
+            content = Label(text='[ref=%s]%s[/ref]' % (n['content'], n['content']), markup=True)
+            content.bind(on_ref_press=partial(self.select_notification, n))
+            container.add_widget(content)
+            container.add_widget(Label(text=n['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
+            body.add_widget(container)
+        root.add_widget(body)
+        self.add_widget(root)
+
+    def select_notification(self, *args):
+        global question
+        question = args[0]
+        screen_manager.switch_to(QuestionScreen())
 
 
 class ProfileScreen(Screen):
-    pass
+
+    def __init__(self):
+        super(ProfileScreen, self).__init__()
+        root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+        global profile
+        if profile:
+            body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+            body.bind(minimum_height=body.setter('height'))
+
+            for q in cached_questions:
+                container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
+                title = Label(text='[ref=%s]%s[/ref]' % (q['title'], q['title']), markup=True)
+                title.bind(on_ref_press=partial(self.select_question, q))
+                container.add_widget(title)
+                container.add_widget(Label(text=q['like'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
+                container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
+                container.add_widget(Label(text=q['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
+                body.add_widget(container)
+
+            root.add_widget(body)
+            self.add_widget(root)
+
+
 
 
 class CommunityApp(App):
@@ -127,7 +173,7 @@ class CommunityApp(App):
         pass
 
     def build(self):
-        screen_manager.add_widget(MainScreen())
+        screen_manager.add_widget(NotificationScreen())
         return screen_manager
 
 

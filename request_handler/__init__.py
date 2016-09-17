@@ -1,3 +1,3 @@
-from get import get_questions
+from get import get_questions, get_notifications
 from post import post_answer
 

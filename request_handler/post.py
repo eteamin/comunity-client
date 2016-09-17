@@ -40,3 +40,12 @@ def post_like(account_id, question_id=None, answer_id=None):
     else:
         params['answer_id'] = answer_id
     post('%s/post/like' % server_url, data=params)
+
+
+def post_image(account_id, image_path):
+    with open(image_path, 'r') as image_file:
+        params = {
+            'account_id': account_id,
+            'image': image_file
+        }
+        post('%s/post/image' % server_url, data=params)

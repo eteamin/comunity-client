@@ -1,6 +1,6 @@
 from requests import get
 
-from variables import server_url
+from variables import server_url, files_path
 
 
 def get_questions():
@@ -29,3 +29,9 @@ def get_tags():
 
 def get_notifications(account_id):
     return get('%s/get/notifications/%s' % (server_url, account_id)).json()['notifications']
+
+
+def get_image(account_id):
+    image = get('%s/get/image/%s' % (server_url, account_id))
+    with open('%s/%s.jpg' % (files_path, account_id), 'w') as user_image:
+        user_image.write(image.content)

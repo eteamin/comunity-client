@@ -1,16 +1,20 @@
 from functools import partial
+
 from kivy.core.window import Window
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
+from kivy.uix.image import Image
 from kivy.uix.textinput import TextInput
 from kivy.uix.label import Label
 from kivy.app import App
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
-from drawer import NavigationDrawer
-from request_handler import get_questions, post_answer, get_notifications, post_image
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
+
+from drawer import NavigationDrawer
+from request_handler import get_questions, post_answer, get_notifications, post_image, get_image
+from variables import files_path
 
 
 profile = {
@@ -172,13 +176,30 @@ class ProfileScreen(Screen):
 
     def __init__(self):
         super(ProfileScreen, self).__init__()
-        a = FileChooserIconView()
-        a.filters = ['*.png', '*.jpg', '*.jpeg']
-        a.bind(on_submit=self.choose_file)
-        close = Button(size_hint=(None, None), size=(50, 50))
-        close.bind(on_press=partial(self.close_filechooser, a))
-        self.add_widget(a)
-        self.add_widget(close)
+        body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+        body.bind(minimum_height=body.setter('height'))
+        container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height))
+        get_image(user['id'])
+        profile_picture = Image(
+            source='%s/%s.jpg' % (files_path, user['id']),
+            pos_hint={'center_x': 0.5, 'center_y': 0.8},
+            size_hint=(1, None),
+            size=(Window.width / 5, Window.height / 5)
+        )
+        container.add_widget(profile_picture)
+        display_name = Label(text=profile['display_name'])
+        container.add_widget(display_name)
+        container.add_widget(Label(text=profile['age'], pos_hint={'center_x': 0.5, 'center_y': 0.5}))
+        container.add_widget(Label(text=profile['gender'], pos_hint={'center_x': 0.5, 'center_y': 0.2}))
+        container.add_widget(Label(text=profile['reputation'], pos_hint={'center_x': 0.5, 'center_y': 0.1}))
+        body.add_widget(container)
+        # a = FileChooserIconView()
+        # a.filters = ['*.png', '*.jpg', '*.jpeg']
+        # a.bind(on_submit=self.choose_file)
+        # close = Button(size_hint=(None, None), size=(50, 50))
+        # close.bind(on_press=partial(self.close_filechooser, a))
+        # # self.add_widget(a)
+        self.add_widget(body)
 
     def choose_file(self, *args):
         post_image(user['id'], args[1][0])
@@ -196,7 +217,7 @@ class CommunityApp(App):
         pass
 
     def build(self):
-        screen_manager.add_widget(ProfileScreen())
+        screen_manager.add_widget(MainScreen())
         return screen_manager
 
 

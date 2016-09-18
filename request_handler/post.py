@@ -43,9 +43,8 @@ def post_like(account_id, question_id=None, answer_id=None):
 
 
 def post_image(account_id, image_path):
-    with open(image_path, 'r') as image_file:
+    with open(image_path, 'rb') as image_file:
         params = {
             'account_id': account_id,
-            'image': image_file
         }
-        post('%s/post/image' % server_url, data=params)
+        post('%s/post/image' % server_url, data=params, files=dict(image=image_file.read()))

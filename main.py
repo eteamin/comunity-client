@@ -1,6 +1,7 @@
 from functools import partial
 
 from kivy.core.window import Window
+from kivy.metrics import dp
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
@@ -180,16 +181,17 @@ class ProfileScreen(Screen):
         body.bind(minimum_height=body.setter('height'))
         container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height))
         get_image(user['id'])
+        img_src = '%s/%s.jpg' % (files_path, user['id'])
         profile_picture = Image(
-            source='%s/%s.jpg' % (files_path, user['id']),
+            source=img_src,
             pos_hint={'center_x': 0.5, 'center_y': 0.8},
             size_hint=(1, None),
             size=(Window.width / 5, Window.height / 5)
         )
         container.add_widget(profile_picture)
-        display_name = Label(text=profile['display_name'])
+        display_name = Label(text=profile['display_name'], pos_hint={'center_x': 0.5, 'center_y': 0.4})
         container.add_widget(display_name)
-        container.add_widget(Label(text=profile['age'], pos_hint={'center_x': 0.5, 'center_y': 0.5}))
+        container.add_widget(Label(text=profile['age'], pos_hint={'center_x': 0.5, 'center_y': 0.5}, font_size=dp(20)))
         container.add_widget(Label(text=profile['gender'], pos_hint={'center_x': 0.5, 'center_y': 0.2}))
         container.add_widget(Label(text=profile['reputation'], pos_hint={'center_x': 0.5, 'center_y': 0.1}))
         body.add_widget(container)

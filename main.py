@@ -2,6 +2,8 @@ from functools import partial
 
 from kivy.core.window import Window
 from kivy.metrics import dp
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.carousel import Carousel
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
@@ -12,6 +14,7 @@ from kivy.app import App
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
+from kivy.uix.widget import Widget
 
 from drawer import NavigationDrawer
 from request_handler import get_questions, post_answer, get_notifications, post_image, get_image
@@ -158,7 +161,7 @@ class NotificationScreen(Screen):
 class UserScreen(Screen):
     def __init__(self):
         super(UserScreen, self).__init__()
-
+        root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
         body = GridLayout(cols=1, spacing=2, size_hint_y=None)
         body.bind(minimum_height=body.setter('height'))
 
@@ -169,8 +172,8 @@ class UserScreen(Screen):
         container.add_widget(Label(text=profile['gender'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
         container.add_widget(Label(text=profile['reputation'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
         body.add_widget(container)
-
-        self.add_widget(body)
+        root.add_widget(body)
+        self.add_widget(root)
 
 
 class ProfileScreen(Screen):

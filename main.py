@@ -1,24 +1,26 @@
 from functools import partial
+from os import path
 
+from kivy.app import App
 from kivy.core.window import Window
+# from kivy.graphics import Color
+from kivy.lang import Builder
 from kivy.metrics import dp
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.carousel import Carousel
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
 from kivy.uix.image import Image
-from kivy.uix.textinput import TextInput
 from kivy.uix.label import Label
-from kivy.app import App
+from kivy.uix.textinput import TextInput
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
-from kivy.uix.widget import Widget
 
 from drawer import NavigationDrawer
 from request_handler import get_questions, post_answer, get_notifications, post_image, get_image
 from variables import files_path
+
+CANVAS = path.abspath(path.join(path.dirname(__file__), 'views', 'canvas.kv'))
 
 
 profile = {
@@ -158,6 +160,47 @@ class NotificationScreen(Screen):
         screen_manager.switch_to(QuestionScreen())
 
 
+class SignUp(Screen):
+    _height = Window.height
+    _width = Window.width
+
+    def __init__(self):
+        super(SignUp, self).__init__()
+        body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+        body.bind(minimum_height=body.setter('height'))
+
+        container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height))
+        display_name = Label(text='Sign Up', pos_hint={'center_x': 0.5, 'center_y': 0.9})
+        container.add_widget(display_name)
+        container.add_widget(TextInput(
+            hint_text='User Name',
+            size_hint=(None, None),
+            size=(Window.width / 5, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.8}
+        ))
+        container.add_widget(TextInput(
+            hint_text='Display Name',
+            size_hint=(None, None),
+            size=(Window.width / 5, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.7}
+        ))
+        container.add_widget(TextInput(
+            hint_text='Password',
+            size_hint=(None, None),
+            size=(Window.width / 5, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.6},
+            password=True
+        ))
+        container.add_widget(TextInput(
+            hint_text='Bio',
+            size_hint=(None, None),
+            size=(Window.width / 5, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+        ))
+        body.add_widget(container)
+        self.add_widget(body)
+
+
 class UserScreen(Screen):
     def __init__(self):
         super(UserScreen, self).__init__()
@@ -180,9 +223,9 @@ class ProfileScreen(Screen):
 
     def __init__(self):
         super(ProfileScreen, self).__init__()
-        body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+        body = GridLayout(cols=1, spacing=2, size_hint=(1, None), size=(Window.width, Window.height))
         body.bind(minimum_height=body.setter('height'))
-        container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height))
+        container = RelativeLayout()
         get_image(user['id'])
         img_src = '%s/%s.jpg' % (files_path, user['id'])
         profile_picture = Image(
@@ -222,7 +265,8 @@ class CommunityApp(App):
         pass
 
     def build(self):
-        screen_manager.add_widget(MainScreen())
+        Builder.load_file(CANVAS)
+        screen_manager.add_widget(SignUp())
         return screen_manager
 
 

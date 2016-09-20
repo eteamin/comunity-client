@@ -3,9 +3,10 @@ from os import path
 
 from kivy.app import App
 from kivy.core.window import Window
-# from kivy.graphics import Color
+from kivy.graphics import Color, Rectangle
 from kivy.lang import Builder
 from kivy.metrics import dp
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
@@ -19,8 +20,6 @@ from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from drawer import NavigationDrawer
 from request_handler import get_questions, post_answer, get_notifications, post_image, get_image
 from variables import files_path
-
-CANVAS = path.abspath(path.join(path.dirname(__file__), 'views', 'canvas.kv'))
 
 
 profile = {
@@ -161,15 +160,22 @@ class NotificationScreen(Screen):
 
 
 class SignUp(Screen):
-    _height = Window.height
-    _width = Window.width
-
     def __init__(self):
         super(SignUp, self).__init__()
-        body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+        root = BoxLayout(orientation='vertical')
+        header = GridLayout(cols=1, size_hint=(1, .1))
+        with header.canvas.before:
+            Color(.28, .40, .28, .8)
+            header.rect = Rectangle(size=header.size, pos=header.pos)
+        header.bind(pos=self.update_rect, size=self.update_rect)
+        header.add_widget(Label(text='Question'))
+        body = GridLayout(cols=1, spacing=2, size_hint=(1, .9))
         body.bind(minimum_height=body.setter('height'))
-
-        container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height))
+        with body.canvas.before:
+            Color(.65, .72, .66, .8)
+            body.rect = Rectangle(size=body.size, pos=body.pos)
+        body.bind(pos=self.update_rect, size=self.update_rect)
+        container = RelativeLayout()
         display_name = Label(text='Sign Up', pos_hint={'center_x': 0.5, 'center_y': 0.9})
         container.add_widget(display_name)
         container.add_widget(TextInput(
@@ -198,7 +204,13 @@ class SignUp(Screen):
             pos_hint={'center_x': 0.5, 'center_y': 0.5}
         ))
         body.add_widget(container)
-        self.add_widget(body)
+        root.add_widget(header)
+        root.add_widget(body)
+        self.add_widget(root)
+
+    def update_rect(self, instance, value):
+        instance.rect.pos = instance.pos
+        instance.rect.size = instance.size
 
 
 class UserScreen(Screen):
@@ -265,7 +277,6 @@ class CommunityApp(App):
         pass
 
     def build(self):
-        Builder.load_file(CANVAS)
         screen_manager.add_widget(SignUp())
         return screen_manager
 

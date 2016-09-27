@@ -3,7 +3,7 @@ from os import path
 
 from kivy.app import App
 from kivy.core.window import Window
-from kivy.graphics import Color, Rectangle
+from kivy.graphics import Color, Rectangle, Line
 from kivy.lang import Builder
 from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout
@@ -37,21 +37,44 @@ user = {
 screen_manager = ScreenManager(transition=SlideTransition())
 
 
+def update_rect(instance, value):
+    instance.rect.pos = instance.pos
+    instance.rect.size = instance.size
+
+
 class MainScreen(Screen):
     def __init__(self):
         super(MainScreen, self).__init__()
 
-        root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+        scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+        box_container = BoxLayout(orientation='vertical')
         global cached_questions
         if not cached_questions:
             cached_questions = get_questions()
+        header = GridLayout(cols=1, size_hint=(1, .1))
+        with header.canvas.before:
+            Color(.28, .40, .28, .8)
+            header.rect = Rectangle(size=header.size, pos=header.pos)
 
-        body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+        header.bind(pos=update_rect, size=update_rect)
+        header.add_widget(Label(text='Question'))
+        body = GridLayout(cols=1, spacing=2, size_hint=(1, .9))
         body.bind(minimum_height=body.setter('height'))
 
+        with body.canvas.before:
+            Color(.65, .72, .66, .8)
+            body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=body.pos)
+        body.bind(pos=update_rect, size=update_rect)
+
         for q in cached_questions:
-            container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
-            title = Label(text='[ref=%s]%s[/ref]' % (q['title'], q['title']), markup=True)
+            container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 4))
+
+            title = Label(
+                text='[ref=%s]%s[/ref]' % (q['title'], q['title']),
+                halign='left',
+                markup=True,
+                pos_hint={'center_x': 0.4, 'center_y': 0.8}
+            )
             title.bind(on_ref_press=partial(self.select_question, q))
             container.add_widget(title)
             container.add_widget(Label(text=q['like'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
@@ -59,13 +82,15 @@ class MainScreen(Screen):
             container.add_widget(Label(text=q['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
             body.add_widget(container)
 
-        root.add_widget(body)
+        box_container.add_widget(header)
+        box_container.add_widget(body)
+        scroll_view.add_widget(box_container)
 
         navigationdrawer = NavigationDrawer()
 
         side_panel = ProfileScreen()
         navigationdrawer.add_widget(side_panel)
-        navigationdrawer.add_widget(root)
+        navigationdrawer.add_widget(scroll_view)
         Window.add_widget(navigationdrawer)
 
     def select_question(self, *args):
@@ -174,43 +199,48 @@ class SignUp(Screen):
         with body.canvas.before:
             Color(.65, .72, .66, .8)
             body.rect = Rectangle(size=body.size, pos=body.pos)
-        body.bind(pos=self.update_rect, size=self.update_rect)
+        body.bind(pos=update_rect, size=update_rect)
         container = RelativeLayout()
         display_name = Label(text='Sign Up', pos_hint={'center_x': 0.5, 'center_y': 0.9})
         container.add_widget(display_name)
         container.add_widget(TextInput(
             hint_text='User Name',
             size_hint=(None, None),
-            size=(Window.width / 5, Window.height / 20),
+            size=(Window.width / 4, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.8}
         ))
         container.add_widget(TextInput(
             hint_text='Display Name',
             size_hint=(None, None),
-            size=(Window.width / 5, Window.height / 20),
+            size=(Window.width / 4, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.7}
         ))
         container.add_widget(TextInput(
             hint_text='Password',
             size_hint=(None, None),
-            size=(Window.width / 5, Window.height / 20),
+            size=(Window.width / 4, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.6},
             password=True
         ))
         container.add_widget(TextInput(
-            hint_text='Bio',
+            hint_text='Repeat Password',
             size_hint=(None, None),
-            size=(Window.width / 5, Window.height / 20),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+            size=(Window.width / 4, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            password=True
+        ))
+        container.add_widget(Button(
+            text='Register',
+            size_hint=(None, None),
+            size=(Window.width / 4, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.4},
+            background_normal='',
+            background_color=(.28, .40, .28, 1)
         ))
         body.add_widget(container)
         root.add_widget(header)
         root.add_widget(body)
         self.add_widget(root)
-
-    def update_rect(self, instance, value):
-        instance.rect.pos = instance.pos
-        instance.rect.size = instance.size
 
 
 class UserScreen(Screen):
@@ -277,7 +307,7 @@ class CommunityApp(App):
         pass
 
     def build(self):
-        screen_manager.add_widget(SignUp())
+        screen_manager.add_widget(MainScreen())
         return screen_manager
 
 

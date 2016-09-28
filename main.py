@@ -1,6 +1,6 @@
 from functools import partial
 from os import path
-
+import yaml
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, Line
@@ -22,18 +22,12 @@ from request_handler import get_questions, post_answer, get_notifications, post_
 from variables import files_path
 
 
-profile = {
-    'display_name': 'Amin Etesamian',
-    'age': '23',
-    'gender': 'male',
-    'reputation': '3690'
-}
-cached_questions = None
-cached_notifications = None
+user = None
+profile = None
 question = None
-user = {
-    'id': 1
-}
+
+config_file = path.abspath(path.join(path.dirname(__file__), 'configuration.yaml'))
+
 screen_manager = ScreenManager(transition=SlideTransition())
 
 
@@ -48,9 +42,6 @@ class MainScreen(Screen):
 
         scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
         box_container = BoxLayout(orientation='vertical')
-        global cached_questions
-        if not cached_questions:
-            cached_questions = get_questions()
         header = GridLayout(cols=1, size_hint=(1, .1))
         with header.canvas.before:
             Color(.28, .40, .28, .8)
@@ -66,7 +57,7 @@ class MainScreen(Screen):
             body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=body.pos)
         body.bind(pos=update_rect, size=update_rect)
 
-        for q in cached_questions:
+        for q in get_questions():
             container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 4))
 
             title = Label(
@@ -165,10 +156,7 @@ class NotificationScreen(Screen):
         root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
         body = GridLayout(cols=1, spacing=2, size_hint_y=None)
         body.bind(minimum_height=body.setter('height'))
-        global cached_notifications
-        if not cached_notifications:
-            cached_notifications = get_notifications(user['id'])
-        for n in cached_notifications:
+        for n in get_notifications(user['id']):
             container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 10))
             content = Label(text='[ref=%s]%s[/ref]' % (n['content'], n['content']), markup=True)
             content.bind(on_ref_press=partial(self.select_notification, n))
@@ -192,7 +180,7 @@ class SignUp(Screen):
         with header.canvas.before:
             Color(.28, .40, .28, .8)
             header.rect = Rectangle(size=header.size, pos=header.pos)
-        header.bind(pos=self.update_rect, size=self.update_rect)
+        header.bind(pos=update_rect, size=update_rect)
         header.add_widget(Label(text='Question'))
         body = GridLayout(cols=1, spacing=2, size_hint=(1, .9))
         body.bind(minimum_height=body.setter('height'))
@@ -201,8 +189,8 @@ class SignUp(Screen):
             body.rect = Rectangle(size=body.size, pos=body.pos)
         body.bind(pos=update_rect, size=update_rect)
         container = RelativeLayout()
-        display_name = Label(text='Sign Up', pos_hint={'center_x': 0.5, 'center_y': 0.9})
-        container.add_widget(display_name)
+        title = Label(text='Sign Up', pos_hint={'center_x': 0.5, 'center_y': 0.9})
+        container.add_widget(title)
         container.add_widget(TextInput(
             hint_text='User Name',
             size_hint=(None, None),
@@ -243,6 +231,57 @@ class SignUp(Screen):
         self.add_widget(root)
 
 
+class Sign_In(Screen):
+    def __init__(self):
+        super(Sign_In, self).__init__()
+        root = BoxLayout(orientation='vertical')
+        header = GridLayout(cols=1, size_hint=(1, .1))
+
+        with header.canvas.before:
+            Color(.28, .40, .28, .8)
+            header.rect = Rectangle(size=header.size, pos=header.pos)
+
+        header.bind(pos=update_rect, size=update_rect)
+        header.add_widget(Label(text='Question'))
+        body = GridLayout(cols=1, spacing=2, size_hint=(1, .9))
+        body.bind(minimum_height=body.setter('height'))
+
+        with body.canvas.before:
+            Color(.65, .72, .66, .8)
+            body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=body.pos)
+        body.bind(pos=update_rect, size=update_rect)
+
+        container = RelativeLayout()
+        title = Label(text='Login to your account', pos_hint={'center_x': 0.5, 'center_y': 0.9})
+        container.add_widget(title)
+        container.add_widget(TextInput(
+            hint_text='User Name',
+            size_hint=(None, None),
+            size=(Window.width / 4, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.7}
+        ))
+        container.add_widget(TextInput(
+            hint_text='Password',
+            size_hint=(None, None),
+            size=(Window.width / 4, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.6},
+            password=True
+        ))
+        login = Button(
+            text='Login',
+            size_hint=(None, None),
+            size=(Window.width / 4, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            background_normal='',
+            background_color=(.28, .40, .28, 1)
+        )
+        container.add_widget(login)
+        body.add_widget(container)
+        root.add_widget(header)
+        root.add_widget(body)
+        self.add_widget(root)
+
+
 class UserScreen(Screen):
     def __init__(self):
         super(UserScreen, self).__init__()
@@ -265,31 +304,32 @@ class ProfileScreen(Screen):
 
     def __init__(self):
         super(ProfileScreen, self).__init__()
-        body = GridLayout(cols=1, spacing=2, size_hint=(1, None), size=(Window.width, Window.height))
-        body.bind(minimum_height=body.setter('height'))
-        container = RelativeLayout()
-        get_image(user['id'])
-        img_src = '%s/%s.jpg' % (files_path, user['id'])
-        profile_picture = Image(
-            source=img_src,
-            pos_hint={'center_x': 0.5, 'center_y': 0.8},
-            size_hint=(1, None),
-            size=(Window.width / 5, Window.height / 5)
-        )
-        container.add_widget(profile_picture)
-        display_name = Label(text=profile['display_name'], pos_hint={'center_x': 0.5, 'center_y': 0.4})
-        container.add_widget(display_name)
-        container.add_widget(Label(text=profile['age'], pos_hint={'center_x': 0.5, 'center_y': 0.5}, font_size=dp(20)))
-        container.add_widget(Label(text=profile['gender'], pos_hint={'center_x': 0.5, 'center_y': 0.2}))
-        container.add_widget(Label(text=profile['reputation'], pos_hint={'center_x': 0.5, 'center_y': 0.1}))
-        body.add_widget(container)
-        # a = FileChooserIconView()
-        # a.filters = ['*.png', '*.jpg', '*.jpeg']
-        # a.bind(on_submit=self.choose_file)
-        # close = Button(size_hint=(None, None), size=(50, 50))
-        # close.bind(on_press=partial(self.close_filechooser, a))
-        # # self.add_widget(a)
-        self.add_widget(body)
+        if user['id']:
+            body = GridLayout(cols=1, spacing=2, size_hint=(1, None), size=(Window.width, Window.height))
+            # body.bind(minimum_height=body.setter('height'))
+            # container = RelativeLayout()
+            # get_image(user['id'])
+            # img_src = '%s/%s.jpg' % (files_path, user['id'])
+            # profile_picture = Image(
+            #     source=img_src,
+            #     pos_hint={'center_x': 0.5, 'center_y': 0.8},
+            #     size_hint=(1, None),
+            #     size=(Window.width / 5, Window.height / 5)
+            # )
+            # container.add_widget(profile_picture)
+            # display_name = Label(text=profile['display_name'], pos_hint={'center_x': 0.5, 'center_y': 0.4})
+            # container.add_widget(display_name)
+            # container.add_widget(Label(text=profile['age'], pos_hint={'center_x': 0.5, 'center_y': 0.5}, font_size=dp(20)))
+            # container.add_widget(Label(text=profile['gender'], pos_hint={'center_x': 0.5, 'center_y': 0.2}))
+            # container.add_widget(Label(text=profile['reputation'], pos_hint={'center_x': 0.5, 'center_y': 0.1}))
+            # body.add_widget(container)
+            # # a = FileChooserIconView()
+            # # a.filters = ['*.png', '*.jpg', '*.jpeg']
+            # # a.bind(on_submit=self.choose_file)
+            # # close = Button(size_hint=(None, None), size=(50, 50))
+            # # close.bind(on_press=partial(self.close_filechooser, a))
+            # # # self.add_widget(a)
+            # self.add_widget(body)
 
     def choose_file(self, *args):
         post_image(user['id'], args[1][0])
@@ -299,15 +339,25 @@ class ProfileScreen(Screen):
 
 
 class CommunityApp(App):
+    def on_start(self):
+        global user
+        with open(config_file, 'r') as stream:
+            user = yaml.load(stream)
+        if user['id']:
+            screen_manager.add_widget(MainScreen())
+        else:
+            screen_manager.add_widget(Sign_In())
 
     def on_pause(self):
         return True
+
+    def on_stop(self):
+        pass
 
     def on_resume(self):
         pass
 
     def build(self):
-        screen_manager.add_widget(MainScreen())
         return screen_manager
 
 

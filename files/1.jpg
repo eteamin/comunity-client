@@ -11,10 +11,10 @@
     <script type="text/javascript" src="?__debugger__=yes&amp;cmd=resource&amp;f=jquery.js"></script>
     <script type="text/javascript" src="?__debugger__=yes&amp;cmd=resource&amp;f=debugger.js"></script>
     <script type="text/javascript">
-      var TRACEBACK = 140668154867088,
+      var TRACEBACK = 140673277914768,
           CONSOLE_MODE = false,
           EVALEX = true,
-          SECRET = "njL1e9qSYilBh1iXBJgG";
+          SECRET = "riRRt4PcPRImlCQRrB65";
     </script>
   </head>
   <body>
@@ -26,147 +26,147 @@
 <h2 class="traceback">Traceback <em>(most recent call last)</em></h2>
 <div class="traceback">
   
-  <ul><li><div class="frame" id="frame-140668155219088">
+  <ul><li><div class="frame" id="frame-140673280460560">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/wsgiapp.py"</cite>,
       line <em class="line">120</em>,
       in <code class="function">__call__</code></h4>
   <pre>response = self.wrapped_dispatch(controller, environ, context)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157369168">
+<li><div class="frame" id="frame-140673280459536">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/appwrappers/errorpage.py"</cite>,
       line <em class="line">56</em>,
       in <code class="function">__call__</code></h4>
   <pre>resp = self.next_handler(controller, environ, context)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157366352">
+<li><div class="frame" id="frame-140673280072592">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/appwrappers/transaction_manager.py"</cite>,
       line <em class="line">107</em>,
       in <code class="function">__call__</code></h4>
   <pre>reraise(*exc_info)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157367184">
+<li><div class="frame" id="frame-140673280073616">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/appwrappers/transaction_manager.py"</cite>,
       line <em class="line">83</em>,
       in <code class="function">__call__</code></h4>
   <pre>response = self.next_handler(controller, environ, context)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157369104">
+<li><div class="frame" id="frame-140673280073104">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/appwrappers/caching.py"</cite>,
       line <em class="line">54</em>,
       in <code class="function">__call__</code></h4>
   <pre>return self.next_handler(controller, environ, context)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157033872">
+<li><div class="frame" id="frame-140673280070480">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/appwrappers/session.py"</cite>,
       line <em class="line">71</em>,
       in <code class="function">__call__</code></h4>
   <pre>response = self.next_handler(controller, environ, context)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157032976">
+<li><div class="frame" id="frame-140673280070096">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/appwrappers/identity.py"</cite>,
       line <em class="line">47</em>,
       in <code class="function">__call__</code></h4>
   <pre>return self.next_handler(controller, environ, context)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157034384">
+<li><div class="frame" id="frame-140673280072976">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/appwrappers/i18n.py"</cite>,
       line <em class="line">71</em>,
       in <code class="function">__call__</code></h4>
   <pre>return self.next_handler(controller, environ, context)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157032336">
+<li><div class="frame" id="frame-140673280073360">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/wsgiapp.py"</cite>,
       line <em class="line">285</em>,
       in <code class="function">_dispatch</code></h4>
   <pre>return controller(environ, context)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157032912">
+<li><div class="frame" id="frame-140673280073424">
   <h4>File <cite class="filename">"/home/jugger/workspace/web/community/community/lib/base.py"</cite>,
       line <em class="line">27</em>,
       in <code class="function">__call__</code></h4>
   <pre>return TGController.__call__(self, environ, context)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157033808">
+<li><div class="frame" id="frame-140673280073168">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/controllers/dispatcher.py"</cite>,
       line <em class="line">119</em>,
       in <code class="function">__call__</code></h4>
   <pre>response = self._perform_call(context)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157032784">
+<li><div class="frame" id="frame-140673280073680">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/controllers/dispatcher.py"</cite>,
       line <em class="line">108</em>,
       in <code class="function">_perform_call</code></h4>
   <pre>r = self._call(action, params, remainder=remainder, context=context)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157033424">
+<li><div class="frame" id="frame-140673280073296">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/controllers/decoratedcontroller.py"</cite>,
       line <em class="line">119</em>,
       in <code class="function">_call</code></h4>
   <pre>output = controller_caller(context_config, bound_controller_callable, remainder, params)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157033744">
+<li><div class="frame" id="frame-140673280073552">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/decorators.py"</cite>,
       line <em class="line">44</em>,
       in <code class="function">_decorated_controller_caller</code></h4>
   <pre>return application_controller_caller(tg_config, controller, remainder, params)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157032528">
+<li><div class="frame" id="frame-140673280072720">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/configuration/app_config.py"</cite>,
       line <em class="line">146</em>,
       in <code class="function">__call__</code></h4>
   <pre>return self.wrapper(controller, remainder, params)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157032592">
+<li><div class="frame" id="frame-140673280072912">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tgext/debugbar/sections/timing.py"</cite>,
       line <em class="line">77</em>,
       in <code class="function">wrapped_controller</code></h4>
   <pre>result = profiler.runcall(controller, *args, **kw)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157034064">
+<li><div class="frame" id="frame-140673278316688">
   <h4>File <cite class="filename">"/usr/lib/python2.7/cProfile.py"</cite>,
       line <em class="line">149</em>,
       in <code class="function">runcall</code></h4>
   <pre>return func(*args, **kw)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157032848">
+<li><div class="frame" id="frame-140673278316816">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/configuration/app_config.py"</cite>,
       line <em class="line">141</em>,
       in <code class="function">_adapted_next_wrapper</code></h4>
   <pre>controller, remainder, params)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157032464">
+<li><div class="frame" id="frame-140673278319760">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/tg/configuration/app_config.py"</cite>,
       line <em class="line">127</em>,
       in <code class="function">call_controller</code></h4>
   <pre>return controller(*remainder, **params)</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157032656">
+<li><div class="frame" id="frame-140673278319504">
   <h4>File <cite class="filename">"/home/jugger/workspace/web/community/community/controllers/get.py"</cite>,
       line <em class="line">55</em>,
       in <code class="function">image</code></h4>
   <pre>return DBSession.query(AccountImage).filter(AccountImage.account.user_name == 'default').one().image</pre>
 </div>
 
-<li><div class="frame" id="frame-140668157033616">
+<li><div class="frame" id="frame-140673278317840">
   <h4>File <cite class="filename">"/home/jugger/.virtualenvs/community/lib/python2.7/site-packages/sqlalchemy/orm/attributes.py"</cite>,
       line <em class="line">193</em>,
       in <code class="function">__getattr__</code></h4>

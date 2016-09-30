@@ -18,11 +18,11 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 
 from drawer import NavigationDrawer
-from request_handler import get_questions, post_answer, get_notifications, post_image, get_image
+from request_handler import get_questions, post_answer, get_notifications, post_image, get_image, login
 from variables import files_path
 
 
-user = None
+me = None
 profile = None
 question = None
 
@@ -127,7 +127,7 @@ class QuestionScreen(Screen):
                 size=(Window.width / 2, Window.height / 4),
                 pos_hint={'center_x': 0.5, 'center_y': 0.5}
             )
-            answer_input.bind(text=self.set_answer_text)
+            answer_input.bind(text=self.update_answer_text)
             submit_button = Button(
                 text='Submit',
                 size_hint=(None, None),
@@ -145,7 +145,7 @@ class QuestionScreen(Screen):
     def submit_answer(self, account_id, question_id, button):
         post_answer(self.answer_text, account_id, question_id)
 
-    def set_answer_text(self, instance, value):
+    def update_answer_text(self, instance, value):
         self.answer_text = value
 
 
@@ -232,6 +232,9 @@ class SignUp(Screen):
 
 
 class Sign_In(Screen):
+    user_name_text = ''
+    password_text = ''
+
     def __init__(self):
         super(Sign_In, self).__init__()
         root = BoxLayout(orientation='vertical')
@@ -254,20 +257,24 @@ class Sign_In(Screen):
         container = RelativeLayout()
         title = Label(text='Login to your account', pos_hint={'center_x': 0.5, 'center_y': 0.9})
         container.add_widget(title)
-        container.add_widget(TextInput(
+        user_name_input = TextInput(
             hint_text='User Name',
             size_hint=(None, None),
             size=(Window.width / 4, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.7}
-        ))
-        container.add_widget(TextInput(
+        )
+        user_name_input.bind(text=partial(self.update_input_text, 'user_name'))
+        container.add_widget(user_name_input)
+        password_input = TextInput(
             hint_text='Password',
             size_hint=(None, None),
             size=(Window.width / 4, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.6},
             password=True
-        ))
-        login = Button(
+        )
+        password_input.bind(text=partial(self.update_input_text, 'password'))
+        container.add_widget(password_input)
+        sign_in = Button(
             text='Login',
             size_hint=(None, None),
             size=(Window.width / 4, Window.height / 20),
@@ -275,11 +282,29 @@ class Sign_In(Screen):
             background_normal='',
             background_color=(.28, .40, .28, 1)
         )
-        container.add_widget(login)
+        sign_in.bind(on_press=self.sign_in)
+        container.add_widget(sign_in)
         body.add_widget(container)
         root.add_widget(header)
         root.add_widget(body)
         self.add_widget(root)
+
+    def sign_in(self, *args):
+        server_resp = login(self.user_name_text, self.password_text)
+        if server_resp['OK']:
+            with open(config_file, 'w') as stream:
+                me = server_resp['Account']
+                yaml.dump(me, stream)
+        else:
+            # TODO: notify
+            pass
+
+    def update_input_text(self, *args):
+        # args[0] is the referer and args[2] is the value of the textbox
+        if args[0] == 'user_name':
+            self.user_name_text = args[2]
+        else:
+            self.password_text = args[2]
 
 
 class UserScreen(Screen):
@@ -343,10 +368,10 @@ class CommunityApp(App):
         global user
         with open(config_file, 'r') as stream:
             user = yaml.load(stream)
-        if user['id']:
-            screen_manager.add_widget(MainScreen())
-        else:
-            screen_manager.add_widget(Sign_In())
+        # if user['id']:
+        #     screen_manager.add_widget(MainScreen())
+        # else:
+        screen_manager.add_widget(Sign_In())
 
     def on_pause(self):
         return True

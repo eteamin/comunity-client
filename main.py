@@ -6,6 +6,7 @@ from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, Line
 from kivy.lang import Builder
 from kivy.metrics import dp
+from kivy.properties import StringProperty
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.gridlayout import GridLayout
@@ -18,7 +19,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 
 from drawer import NavigationDrawer
-from request_handler import get_questions, post_answer, get_notifications, post_image, get_image, login
+from request_handler import get_questions, post_answer, get_notifications, post_image, get_image, login, register
 from variables import files_path
 
 
@@ -173,70 +174,116 @@ class NotificationScreen(Screen):
 
 
 class SignUp(Screen):
+    user_name_text = ''
+    password_text = ''
+    repeat_pass_text = ''
+
     def __init__(self):
         super(SignUp, self).__init__()
         root = BoxLayout(orientation='vertical')
+
         header = GridLayout(cols=1, size_hint=(1, .1))
         with header.canvas.before:
             Color(.28, .40, .28, .8)
             header.rect = Rectangle(size=header.size, pos=header.pos)
         header.bind(pos=update_rect, size=update_rect)
         header.add_widget(Label(text='Question'))
+
         body = GridLayout(cols=1, spacing=2, size_hint=(1, .9))
         body.bind(minimum_height=body.setter('height'))
         with body.canvas.before:
             Color(.65, .72, .66, .8)
             body.rect = Rectangle(size=body.size, pos=body.pos)
         body.bind(pos=update_rect, size=update_rect)
+
         container = RelativeLayout()
         title = Label(text='Sign Up', pos_hint={'center_x': 0.5, 'center_y': 0.9})
         container.add_widget(title)
-        container.add_widget(TextInput(
+
+        self.notification_label = Label(
+            text='',
+            size_hint=(None, None),
+            size=(Window.width / 4, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.3},
+            markup=True
+        )
+        container.add_widget(self.notification_label)
+
+        user_name_input = TextInput(
             hint_text='User Name',
             size_hint=(None, None),
             size=(Window.width / 4, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.8}
-        ))
-        container.add_widget(TextInput(
-            hint_text='Display Name',
-            size_hint=(None, None),
-            size=(Window.width / 4, Window.height / 20),
-            pos_hint={'center_x': 0.5, 'center_y': 0.7}
-        ))
-        container.add_widget(TextInput(
+        )
+        user_name_input.bind(text=partial(self.update_input_text, 'user_name'))
+        container.add_widget(user_name_input)
+
+        password_input = TextInput(
             hint_text='Password',
             size_hint=(None, None),
             size=(Window.width / 4, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.6},
             password=True
-        ))
-        container.add_widget(TextInput(
+        )
+        password_input.bind(text=partial(self.update_input_text, 'password'))
+        container.add_widget(password_input)
+
+        repeat_password_input = TextInput(
             hint_text='Repeat Password',
             size_hint=(None, None),
             size=(Window.width / 4, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
             password=True
-        ))
-        container.add_widget(Button(
+        )
+        repeat_password_input.bind(text=partial(self.update_input_text, 'repeat_password'))
+        container.add_widget(repeat_password_input)
+
+        register_button = Button(
             text='Register',
             size_hint=(None, None),
             size=(Window.width / 4, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.4},
             background_normal='',
             background_color=(.28, .40, .28, 1)
-        ))
+        )
+        register_button.bind(on_press=self.register)
+        container.add_widget(register_button)
+
         body.add_widget(container)
         root.add_widget(header)
         root.add_widget(body)
         self.add_widget(root)
 
+    def update_input_text(self, *args):
+        referer = args[0]
+        value = args[2]
+        # args[0] is the referer and args[2] is the value of the textbox
+        if referer == 'user_name':
+            self.user_name_text = value
+        elif referer == 'password':
+            self.password_text = value
+        else:
+            self.repeat_pass_text = value
 
-class Sign_In(Screen):
+    def update_notif_text(self, *args):
+        self.notification_label.text = '[ref=%s]%s[/ref]' % (args[0], args[0])
+
+    def register(self, *args):
+        if register(self.user_name_text, self.password_text)['OK']:
+            self.update_notif_text('Registration Complete! Tap Here to Login')
+            self.notification_label.bind(on_ref_press=partial(switch_to_screen, SignIn))
+
+
+def switch_to_screen(*args):
+    screen_manager.switch_to(args[0]())
+
+
+class SignIn(Screen):
     user_name_text = ''
     password_text = ''
 
     def __init__(self):
-        super(Sign_In, self).__init__()
+        super(SignIn, self).__init__()
         root = BoxLayout(orientation='vertical')
         header = GridLayout(cols=1, size_hint=(1, .1))
 
@@ -246,6 +293,7 @@ class Sign_In(Screen):
 
         header.bind(pos=update_rect, size=update_rect)
         header.add_widget(Label(text='Question'))
+
         body = GridLayout(cols=1, spacing=2, size_hint=(1, .9))
         body.bind(minimum_height=body.setter('height'))
 
@@ -257,6 +305,7 @@ class Sign_In(Screen):
         container = RelativeLayout()
         title = Label(text='Login to your account', pos_hint={'center_x': 0.5, 'center_y': 0.9})
         container.add_widget(title)
+
         user_name_input = TextInput(
             hint_text='User Name',
             size_hint=(None, None),
@@ -265,6 +314,7 @@ class Sign_In(Screen):
         )
         user_name_input.bind(text=partial(self.update_input_text, 'user_name'))
         container.add_widget(user_name_input)
+
         password_input = TextInput(
             hint_text='Password',
             size_hint=(None, None),
@@ -274,6 +324,7 @@ class Sign_In(Screen):
         )
         password_input.bind(text=partial(self.update_input_text, 'password'))
         container.add_widget(password_input)
+
         sign_in = Button(
             text='Login',
             size_hint=(None, None),
@@ -284,6 +335,7 @@ class Sign_In(Screen):
         )
         sign_in.bind(on_press=self.sign_in)
         container.add_widget(sign_in)
+
         body.add_widget(container)
         root.add_widget(header)
         root.add_widget(body)
@@ -371,7 +423,7 @@ class CommunityApp(App):
         # if user['id']:
         #     screen_manager.add_widget(MainScreen())
         # else:
-        screen_manager.add_widget(Sign_In())
+        screen_manager.add_widget(SignUp())
 
     def on_pause(self):
         return True

@@ -1,13 +1,15 @@
 from functools import partial
 from os import path
+
 import yaml
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, Line
 from kivy.lang import Builder
 from kivy.metrics import dp
-from kivy.properties import StringProperty
+from kivy.properties import StringProperty, ReferenceListProperty
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.dropdown import DropDown
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
@@ -19,7 +21,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 
 from drawer import NavigationDrawer
-from request_handler import get_questions, post_answer, get_notifications, post_image, get_image, login, register
+from request_handler import get_questions, post_answer, get_notifications, post_image, get_tags, login, register
 from variables import files_path
 
 
@@ -37,20 +39,48 @@ def update_rect(instance, value):
     instance.rect.size = instance.size
 
 
+# class Header(GridLayout):
+#     size_hint = None
+#
+#     def __init__(self):
+#         super(Header, self).__init__()
+#
+#         with self.canvas.before:
+#             Color(.28, .40, .28, .8)
+#             self.rect = Rectangle(size=self.size, pos=self.pos)
+#
+#         self.bind(pos=update_rect, size=update_rect)
+#         self.add_widget(Label(text='Question'))
+
+
 class MainScreen(Screen):
     def __init__(self):
         super(MainScreen, self).__init__()
 
         scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
         box_container = BoxLayout(orientation='vertical')
-        header = GridLayout(cols=1, size_hint=(1, .1))
+
+        header = GridLayout(cols=1, size_hint=(1, .05))
         with header.canvas.before:
             Color(.28, .40, .28, .8)
             header.rect = Rectangle(size=header.size, pos=header.pos)
-
         header.bind(pos=update_rect, size=update_rect)
         header.add_widget(Label(text='Question'))
-        body = GridLayout(cols=1, spacing=2, size_hint=(1, .9))
+
+        nav_bar = GridLayout(cols=3, size_hint=(1, .05))
+        with nav_bar.canvas.before:
+            Color(.9, .9, .9, .8)
+            nav_bar.rect = Rectangle(size=nav_bar.size, pos=nav_bar.pos)
+        nav_bar.bind(pos=update_rect, size=update_rect)
+        ask_question_label = Label(text='[ref=Ask a Question]Ask a Question[/ref]', markup=True)
+        ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen))
+        nav_bar.add_widget(ask_question_label)
+
+        need_help_label = Label(text='[ref=Need Help?]Need Help?[/ref]', markup=True)
+        # need_help_label.bind(on_ref_press=partial(switch_to_screen, MainScreen))
+        nav_bar.add_widget(need_help_label)
+
+        body = GridLayout(cols=1, spacing=2, size_hint=(1, .90))
         body.bind(minimum_height=body.setter('height'))
 
         with body.canvas.before:
@@ -70,25 +100,123 @@ class MainScreen(Screen):
             title.bind(on_ref_press=partial(self.select_question, q))
             container.add_widget(title)
             container.add_widget(Label(text=q['like'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
-            container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
+            # container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
             container.add_widget(Label(text=q['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
             body.add_widget(container)
 
         box_container.add_widget(header)
+        box_container.add_widget(nav_bar)
         box_container.add_widget(body)
         scroll_view.add_widget(box_container)
 
-        navigationdrawer = NavigationDrawer()
+        navigation_drawer = NavigationDrawer()
 
         side_panel = ProfileScreen()
-        navigationdrawer.add_widget(side_panel)
-        navigationdrawer.add_widget(scroll_view)
-        Window.add_widget(navigationdrawer)
+        navigation_drawer.add_widget(side_panel)
+        navigation_drawer.add_widget(scroll_view)
+        Window.add_widget(navigation_drawer)
 
     def select_question(self, *args):
         global question
         question = args[0]
         screen_manager.switch_to(QuestionScreen())
+
+
+class NewQuestionScreen(Screen):
+    def __init__(self):
+        super(NewQuestionScreen, self).__init__()
+
+        scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+        box_container = BoxLayout(orientation='vertical')
+
+        header = GridLayout(cols=1, size_hint=(1, .05))
+        with header.canvas.before:
+            Color(.28, .40, .28, .8)
+            header.rect = Rectangle(size=header.size, pos=header.pos)
+        header.bind(pos=update_rect, size=update_rect)
+        header.add_widget(Label(text='Question'))
+
+        body = GridLayout(cols=1, spacing=2, size_hint=(1, .90))
+        body.bind(minimum_height=body.setter('height'))
+
+        with body.canvas.before:
+            Color(.65, .72, .66, .8)
+            body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=body.pos)
+        body.bind(pos=update_rect, size=update_rect)
+        container = RelativeLayout()
+        title = Label(text='Post Your Question', pos_hint={'center_x': 0.5, 'center_y': 0.9})
+        container.add_widget(title)
+
+        title_input = TextInput(
+            hint_text='Title',
+            size_hint=(None, None),
+            size=(Window.width / 1.3, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.8}
+        )
+        title_input.bind(text=partial(self.update_input_text, 'user_name'))
+        container.add_widget(title_input)
+
+        question_input = TextInput(
+            hint_text='Question',
+            size_hint=(None, None),
+            size=(Window.width / 1.3, Window.height / 2),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            password=True
+        )
+        question_input.bind(text=partial(self.update_input_text, 'password'))
+        container.add_widget(question_input)
+
+        sign_in = Button(
+            text='Post',
+            size_hint=(None, None),
+            size=(Window.width / 4, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.1},
+            background_normal='',
+            background_color=(.28, .40, .28, 1)
+        )
+        # sign_in.bind(on_press=self.sign_in)
+        container.add_widget(sign_in)
+
+        tag_selection = DropDown()
+        for t in get_tags():
+            btn = Button(text=t['title'], size_hint_y=None, height=44)
+            # btn.bind(on_release=lambda btn: tag_selection.select(t['title']))
+            tag_selection.add_widget(btn)
+
+        tag_button = Button(
+            text='Tags',
+            size_hint=(None, None),
+            size=(Window.width / 8, Window.height / 20),
+            pos_hint={'center_x': 0.1, 'center_y': 0.2},
+        )
+        tag_button.bind(on_press=tag_selection.open)
+        container.add_widget(tag_button)
+        container.add_widget(tag_selection)
+
+        body.add_widget(container)
+
+        box_container.add_widget(header)
+        box_container.add_widget(body)
+
+        scroll_view.add_widget(box_container)
+
+        navigation_drawer = NavigationDrawer()
+
+        side_panel = ProfileScreen()
+        navigation_drawer.add_widget(side_panel)
+        navigation_drawer.add_widget(scroll_view)
+        Window.add_widget(navigation_drawer)
+
+    def update_input_text(self, *args):
+        referer = args[0]
+        value = args[2]
+        # args[0] is the referer and args[2] is the value of the textbox
+        if referer == 'user_name':
+            self.user_name_text = value
+        elif referer == 'password':
+            self.password_text = value
+        else:
+            self.repeat_pass_text = value
 
 
 class QuestionScreen(Screen):
@@ -107,18 +235,18 @@ class QuestionScreen(Screen):
             question_container.add_widget(
                 Label(text=question['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1})
             )
-            question_container.add_widget(
-                Label(text=question['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2})
-            )
+            # question_container.add_widget(
+                # Label(text=question['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2})
+            # )
             body.add_widget(question_container)
 
             for a in question['answers']:
                 container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
                 container.add_widget(Label(text=a['content'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
                 container.add_widget(Label(text=a['like'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
-                container.add_widget(
-                    Label(text=a['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2})
-                )
+                # container.add_widget(
+                #     Label(text=a['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2})
+                # )
                 container.add_widget(Label(text=a['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
                 body.add_widget(container)
 
@@ -347,6 +475,7 @@ class SignIn(Screen):
             with open(config_file, 'w') as stream:
                 me = server_resp['Account']
                 yaml.dump(me, stream)
+            screen_manager.switch_to(MainScreen())
         else:
             # TODO: notify
             pass
@@ -420,10 +549,10 @@ class CommunityApp(App):
         global user
         with open(config_file, 'r') as stream:
             user = yaml.load(stream)
-        # if user['id']:
-        #     screen_manager.add_widget(MainScreen())
-        # else:
-        screen_manager.add_widget(SignUp())
+        if user['id']:
+            screen_manager.add_widget(MainScreen())
+        else:
+            screen_manager.add_widget(SignUp())
 
     def on_pause(self):
         return True

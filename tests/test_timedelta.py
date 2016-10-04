@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 
-from timedelta import tell_time_ago
+from helpers.timedelta import tell_time_ago
 
 
 class TestCase(unittest.TestCase):

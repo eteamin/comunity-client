@@ -21,7 +21,9 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 
 from drawer import NavigationDrawer
-from request_handler import get_questions, post_answer, get_notifications, post_image, get_tags, login, register
+from request_handler import get_questions, post_answer, get_notifications, post_image, get_tags, login, register, \
+    post_question
+from helpers import normalize_tags
 from variables import files_path
 
 
@@ -123,6 +125,10 @@ class MainScreen(Screen):
 
 
 class NewQuestionScreen(Screen):
+    title_input_text = ''
+    question_input_text = ''
+    tags_input_text = ''
+
     def __init__(self):
         super(NewQuestionScreen, self).__init__()
 
@@ -143,55 +149,55 @@ class NewQuestionScreen(Screen):
             Color(.65, .72, .66, .8)
             body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=body.pos)
         body.bind(pos=update_rect, size=update_rect)
+
         container = RelativeLayout()
         title = Label(text='Post Your Question', pos_hint={'center_x': 0.5, 'center_y': 0.9})
         container.add_widget(title)
 
-        title_input = TextInput(
+        self.title_input = TextInput(
             hint_text='Title',
             size_hint=(None, None),
             size=(Window.width / 1.3, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.8}
         )
-        title_input.bind(text=partial(self.update_input_text, 'user_name'))
-        container.add_widget(title_input)
+        self.title_input.bind(text=partial(self.update_input_text, 'title'))
+        container.add_widget(self.title_input)
 
-        question_input = TextInput(
+        self.question_input = TextInput(
             hint_text='Question',
             size_hint=(None, None),
             size=(Window.width / 1.3, Window.height / 2),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
-            password=True
         )
-        question_input.bind(text=partial(self.update_input_text, 'password'))
-        container.add_widget(question_input)
+        self.question_input.bind(text=partial(self.update_input_text, 'question'))
+        container.add_widget(self.question_input)
 
         sign_in = Button(
             text='Post',
             size_hint=(None, None),
             size=(Window.width / 4, Window.height / 20),
-            pos_hint={'center_x': 0.5, 'center_y': 0.1},
+            pos_hint={'center_x': 0.5, 'center_y': 0.05},
             background_normal='',
             background_color=(.28, .40, .28, 1)
         )
-        # sign_in.bind(on_press=self.sign_in)
+        sign_in.bind(on_press=self.post_question)
         container.add_widget(sign_in)
 
-        tag_selection = DropDown()
-        for t in get_tags():
-            btn = Button(text=t['title'], size_hint_y=None, height=44)
-            # btn.bind(on_release=lambda btn: tag_selection.select(t['title']))
-            tag_selection.add_widget(btn)
-
-        tag_button = Button(
-            text='Tags',
+        self.tag_input = TextInput(
+            hint_text='Tags',
             size_hint=(None, None),
-            size=(Window.width / 8, Window.height / 20),
-            pos_hint={'center_x': 0.1, 'center_y': 0.2},
+            size=(Window.width / 1.3, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.15},
         )
-        tag_button.bind(on_press=tag_selection.open)
-        container.add_widget(tag_button)
-        container.add_widget(tag_selection)
+        self.tag_input.bind(text=partial(self.update_input_text, 'tag'))
+
+        container.add_widget(self.tag_input)
+
+        tag_help = Label(
+            text='Question tags separated by comma. example: grammar, word meaning',
+            pos_hint={'center_x': 0.5, 'center_y': 0.2}
+        )
+        container.add_widget(tag_help)
 
         body.add_widget(container)
 
@@ -211,12 +217,19 @@ class NewQuestionScreen(Screen):
         referer = args[0]
         value = args[2]
         # args[0] is the referer and args[2] is the value of the textbox
-        if referer == 'user_name':
-            self.user_name_text = value
-        elif referer == 'password':
-            self.password_text = value
-        else:
-            self.repeat_pass_text = value
+        if referer == 'title':
+            self.title_input_text = value
+        elif referer == 'question':
+            self.question_input_text = value
+        elif referer == 'tag':
+            self.tags_input_text = value
+
+    def post_question(self, *args):
+        tags = normalize_tags(self.tags_input_text)
+        server_resp = post_question(self.title_input_text, self.question_input_text, int(me['id']), tags=tags)
+        if server_resp['OK']:
+            screen_manager.switch_to(MainScreen())
+        # TODO: Implement handling of possible exceptions
 
 
 class QuestionScreen(Screen):
@@ -265,7 +278,7 @@ class QuestionScreen(Screen):
             )
             new_answer_container.add_widget(answer_input)
             new_answer_container.add_widget(submit_button)
-            submit_button.bind(on_press=partial(self.submit_answer, user['id'], question['id']))
+            submit_button.bind(on_press=partial(self.submit_answer, me['id'], question['id']))
             body.add_widget(new_answer_container)
 
             root.add_widget(body)
@@ -285,7 +298,7 @@ class NotificationScreen(Screen):
         root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
         body = GridLayout(cols=1, spacing=2, size_hint_y=None)
         body.bind(minimum_height=body.setter('height'))
-        for n in get_notifications(user['id']):
+        for n in get_notifications(me['id']):
             container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 10))
             content = Label(text='[ref=%s]%s[/ref]' % (n['content'], n['content']), markup=True)
             content.bind(on_ref_press=partial(self.select_notification, n))
@@ -510,10 +523,10 @@ class ProfileScreen(Screen):
 
     def __init__(self):
         super(ProfileScreen, self).__init__()
-        if user['id']:
+        if me['id']:
             body = GridLayout(cols=1, spacing=2, size_hint=(1, None), size=(Window.width, Window.height))
-            # body.bind(minimum_height=body.setter('height'))
-            # container = RelativeLayout()
+            body.bind(minimum_height=body.setter('height'))
+            container = RelativeLayout()
             # get_image(user['id'])
             # img_src = '%s/%s.jpg' % (files_path, user['id'])
             # profile_picture = Image(
@@ -523,22 +536,22 @@ class ProfileScreen(Screen):
             #     size=(Window.width / 5, Window.height / 5)
             # )
             # container.add_widget(profile_picture)
-            # display_name = Label(text=profile['display_name'], pos_hint={'center_x': 0.5, 'center_y': 0.4})
+            # display_name = Label(text=me['display_name'], pos_hint={'center_x': 0.5, 'center_y': 0.4})
             # container.add_widget(display_name)
-            # container.add_widget(Label(text=profile['age'], pos_hint={'center_x': 0.5, 'center_y': 0.5}, font_size=dp(20)))
-            # container.add_widget(Label(text=profile['gender'], pos_hint={'center_x': 0.5, 'center_y': 0.2}))
-            # container.add_widget(Label(text=profile['reputation'], pos_hint={'center_x': 0.5, 'center_y': 0.1}))
-            # body.add_widget(container)
-            # # a = FileChooserIconView()
-            # # a.filters = ['*.png', '*.jpg', '*.jpeg']
-            # # a.bind(on_submit=self.choose_file)
-            # # close = Button(size_hint=(None, None), size=(50, 50))
-            # # close.bind(on_press=partial(self.close_filechooser, a))
-            # # # self.add_widget(a)
-            # self.add_widget(body)
+            # container.add_widget(Label(text=me['age'], pos_hint={'center_x': 0.5, 'center_y': 0.5}, font_size=dp(20)))
+            # container.add_widget(Label(text=me['gender'], pos_hint={'center_x': 0.5, 'center_y': 0.2}))
+            container.add_widget(Label(text=str(me['reputation']), pos_hint={'center_x': 0.5, 'center_y': 0.1}))
+            body.add_widget(container)
+            # a = FileChooserIconView()
+            # a.filters = ['*.png', '*.jpg', '*.jpeg']
+            # a.bind(on_submit=self.choose_file)
+            # close = Button(size_hint=(None, None), size=(50, 50))
+            # close.bind(on_press=partial(self.close_filechooser, a))
+            # # self.add_widget(a)
+            self.add_widget(body)
 
     def choose_file(self, *args):
-        post_image(user['id'], args[1][0])
+        post_image(me['id'], args[1][0])
 
     def close_filechooser(self, *args):
         self.remove_widget(args[0])
@@ -546,10 +559,10 @@ class ProfileScreen(Screen):
 
 class CommunityApp(App):
     def on_start(self):
-        global user
+        global me
         with open(config_file, 'r') as stream:
-            user = yaml.load(stream)
-        if user['id']:
+            me = yaml.load(stream)
+        if me['id']:
             screen_manager.add_widget(MainScreen())
         else:
             screen_manager.add_widget(SignUp())

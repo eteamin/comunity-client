@@ -3,14 +3,14 @@ from requests import post
 from variables import server_url
 
 
-def post_question(title, content, account_id, tag):
+def post_question(title, content, account_id, tags):
     params = {
         'title': title,
         'content': content,
         'account_id': account_id,
-        'tag': tag
+        'tags': tags
     }
-    post('%s/post/question' % server_url, data=params)
+    return post('%s/post/question' % server_url, data=params).json()
 
 
 def post_answer(content, account_id, question_id):
@@ -19,7 +19,7 @@ def post_answer(content, account_id, question_id):
         'account_id': account_id,
         'question_id': question_id
     }
-    post('%s/post/answer' % server_url, data=params)
+    return post('%s/post/answer' % server_url, data=params).json()
 
 
 def post_comment(content, account_id, answer_id):
@@ -28,7 +28,7 @@ def post_comment(content, account_id, answer_id):
         'account_id': account_id,
         'answer_id': answer_id
     }
-    post('%s/post/answer' % server_url, data=params)
+    return post('%s/post/answer' % server_url, data=params).json()
 
 
 def post_like(account_id, question_id=None, answer_id=None):
@@ -39,7 +39,7 @@ def post_like(account_id, question_id=None, answer_id=None):
         params['question_id'] = question_id
     else:
         params['answer_id'] = answer_id
-    post('%s/post/like' % server_url, data=params)
+    return post('%s/post/like' % server_url, data=params).json()
 
 
 def post_image(account_id, image_path):
@@ -47,4 +47,4 @@ def post_image(account_id, image_path):
         params = {
             'account_id': account_id,
         }
-        post('%s/post/image' % server_url, data=params, files=dict(image=image_file.read()))
+        return post('%s/post/image' % server_url, data=params, files=dict(image=image_file.read())).json()

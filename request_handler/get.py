@@ -4,7 +4,8 @@ from variables import server_url, files_path
 
 
 def get_questions():
-    return get('%s/get/questions' % server_url).json()['questions']
+    resp = get('%s/get/questions' % server_url).json()
+    return resp['questions'] if resp else []
 
 
 def get_question(question_id):

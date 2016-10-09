@@ -23,7 +23,7 @@ from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from drawer import NavigationDrawer
 from request_handler import get_questions, post_answer, get_notifications, post_image, get_tags, login, register, \
     post_question, get_answers
-from helpers import normalize_tags
+from helpers import normalize_tags, tell_time_ago
 from variables import files_path
 
 
@@ -87,7 +87,7 @@ class MainScreen(Screen):
 
         with body.canvas.before:
             Color(.65, .72, .66, .8)
-            body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=body.pos)
+            body.rect = Rectangle(size=(Window.width, Window.height), pos=body.pos)
         body.bind(pos=update_rect, size=update_rect)
 
         for q in get_questions():
@@ -99,11 +99,12 @@ class MainScreen(Screen):
                 markup=True,
                 pos_hint={'center_x': 0.4, 'center_y': 0.8}
             )
-            title.bind(on_ref_press=partial(switch_to_screen, SignIn))
+            title.bind(on_ref_press=partial(self.select_question, q))
             container.add_widget(title)
-            container.add_widget(Label(text=q['like'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
-            # container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
-            container.add_widget(Label(text=q['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
+            container.add_widget(Label(text=str(len(q['likes'])), pos_hint={'center_x': 0.1, 'center_y': 0.5}))
+            container.add_widget(Label(text=str(len(q['views'])), pos_hint={'center_x': 0.2, 'center_y': 0.5}))
+            container.add_widget(Label(text=tell_time_ago(q['creation_time']), pos_hint={'center_x': 0.8, 'center_y': 0.1}))
+            container.add_widget(Label(text=q['account']['user_name'], pos_hint={'center_x': 0.6, 'center_y': 0.1}))
             body.add_widget(container)
 
         scroll_view.add_widget(body)
@@ -112,8 +113,6 @@ class MainScreen(Screen):
         box_container.add_widget(nav_bar)
         box_container.add_widget(scroll_view)
 
-        # scroll_view.add_widget(grid_container)
-
         navigation_drawer = NavigationDrawer()
 
         side_panel = ProfileScreen()
@@ -121,10 +120,10 @@ class MainScreen(Screen):
         navigation_drawer.add_widget(box_container)
         Window.add_widget(navigation_drawer)
 
-    # def select_question(self, *args):
-    #     global question
-    #     question = args[0]
-    #     switch_to_screen(QuestionScreen)
+    def select_question(self, *args):
+        global question
+        question = args[0]
+        switch_to_screen(QuestionScreen)
 
 
 class NewQuestionScreen(Screen):
@@ -241,57 +240,97 @@ class QuestionScreen(Screen):
     def __init__(self):
         super(QuestionScreen, self).__init__()
         if question:
-            root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+            box_container = BoxLayout(orientation='vertical')
 
-            # body = GridLayout(cols=1, spacing=2, size_hint_y=None)
-            # body.bind(minimum_height=body.setter('height'))
-            #
-            # question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 2))
-            # question_container.add_widget(Label(text=question['title'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
-            # question_container.add_widget(
-            #     Label(text=question['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1})
-            # )
-            # # question_container.add_widget(
-            #     # Label(text=question['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2})
-            # # )
-            # body.add_widget(question_container)
-            #
-            # for a in get_answers(question['id']):
-            #     container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
-            #     container.add_widget(Label(text=a['content'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
-            #     container.add_widget(Label(text=a['like'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
-            #     # container.add_widget(
-            #     #     Label(text=a['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2})
-            #     # )
-            #     container.add_widget(Label(text=a['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
-            #     body.add_widget(container)
-            #
-            # new_answer_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
-            # answer_input = TextInput(
-            #     size_hint=(None, None),
-            #     size=(Window.width / 2, Window.height / 4),
-            #     pos_hint={'center_x': 0.5, 'center_y': 0.5}
-            # )
-            # answer_input.bind(text=self.update_answer_text)
-            # submit_button = Button(
-            #     text='Submit',
-            #     size_hint=(None, None),
-            #     size=(Window.width / 10, Window.height / 10),
-            #     pos_hint={'center_x': 0.9, 'center_y': 0.3}
-            # )
-            # new_answer_container.add_widget(answer_input)
-            # new_answer_container.add_widget(submit_button)
-            # submit_button.bind(on_press=partial(self.submit_answer, me['id'], question['id']))
-            # body.add_widget(new_answer_container)
-            #
-            # root.add_widget(body)
-            # self.add_widget(root)
+            header = GridLayout(cols=1, size_hint=(1, None), size=(Window.width, Window.height * .05))
+            with header.canvas.before:
+                Color(.28, .40, .28, .8)
+                header.rect = Rectangle(size=header.size, pos=header.pos)
+            header.bind(pos=update_rect, size=update_rect)
+            header.add_widget(Label(text='Question'))
 
-    def submit_answer(self, account_id, question_id, button):
-        post_answer(self.answer_text, account_id, question_id)
+            nav_bar = GridLayout(cols=3, size_hint=(1, None), size=(Window.width, Window.height * .05))
+            with nav_bar.canvas.before:
+                Color(.9, .9, .9, .8)
+                nav_bar.rect = Rectangle(size=nav_bar.size, pos=nav_bar.pos)
+            nav_bar.bind(pos=update_rect, size=update_rect)
 
-    def update_answer_text(self, instance, value):
-        self.answer_text = value
+            ask_question_label = Label(text='[ref=Ask a Question]Ask a Question[/ref]', markup=True)
+            ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen))
+            nav_bar.add_widget(ask_question_label)
+
+            scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
+            body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+            body.bind(minimum_height=body.setter('height'))
+
+            with body.canvas.before:
+                Color(.65, .72, .66, .8)
+                body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=body.pos)
+            body.bind(pos=update_rect, size=update_rect)
+
+            question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
+            title = Label(
+                text=question['title'],
+                halign='left',
+                markup=True,
+                pos_hint={'center_x': 0.4, 'center_y': 0.8}
+            )
+            question_container.add_widget(title)
+            question_container.add_widget(Label(text=question['like'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
+            # container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
+            question_container.add_widget(Label(text=question['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
+            body.add_widget(question_container)
+
+            for a in get_answers(question['id']):
+                container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 4))
+                container.add_widget(Label(text=a['content']))
+                body.add_widget(container)
+
+            self.answer_input = TextInput(
+                hint_text='Write your answer',
+                size_hint=(None, None),
+                size=(Window.width / 1.3, Window.height / 2),
+                pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            )
+            self.answer_input.bind(text=partial(self.update_input_text, 'answer'))
+            body.add_widget(self.answer_input)
+
+            submit = Button(
+                text='Submit',
+                size_hint=(None, None),
+                size=(Window.width / 4, Window.height / 20),
+                pos_hint={'center_x': 0.5, 'center_y': 0.05},
+                background_normal='',
+                background_color=(.28, .40, .28, 1)
+            )
+            submit.bind(on_press=self.submit_answer)
+            body.add_widget(submit)
+
+            scroll_view.add_widget(body)
+
+            box_container.add_widget(header)
+            box_container.add_widget(nav_bar)
+            box_container.add_widget(scroll_view)
+
+            navigation_drawer = NavigationDrawer()
+
+            side_panel = ProfileScreen()
+            navigation_drawer.add_widget(side_panel)
+            navigation_drawer.add_widget(box_container)
+            Window.add_widget(navigation_drawer)
+
+    def submit_answer(self, *args):
+        resp = post_answer(self.answer_text, me['id'], question['id'])
+        if resp['OK']:
+            switch_to_screen(QuestionScreen)
+        # TODO: implement exception handling
+
+    def update_input_text(self, *args):
+        referer = args[0]
+        value = args[2]
+        # args[0] is the referer and args[2] is the value of the textbox
+        if referer == 'answer':
+            self.answer_text = value
 
 
 class NotificationScreen(Screen):

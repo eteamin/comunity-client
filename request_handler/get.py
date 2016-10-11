@@ -8,8 +8,8 @@ def get_questions():
     return resp['questions'] if resp else []
 
 
-def get_question(question_id):
-    return get('%s/get/question/%s' % (server_url, question_id)).json()['question']
+def get_question(question_id, account_id):
+    return get('%s/get/question/%s/%s' % (server_url, question_id, account_id)).json()['question']
 
 
 def get_answers(question_id):

@@ -22,14 +22,14 @@ from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 
 from drawer import NavigationDrawer
 from request_handler import get_questions, post_answer, get_notifications, post_image, get_tags, login, register, \
-    post_question, get_answers
+    post_question, get_answers, get_question
 from helpers import normalize_tags, tell_time_ago
 from variables import files_path
 
 
 me = None
 profile = None
-question = None
+question_id = None
 
 config_file = path.abspath(path.join(path.dirname(__file__), 'configuration.yaml'))
 
@@ -95,16 +95,29 @@ class MainScreen(Screen):
 
             title = Label(
                 text='[ref=%s]%s[/ref]' % (q['title'], q['title']),
-                halign='left',
                 markup=True,
-                pos_hint={'center_x': 0.4, 'center_y': 0.8}
+                pos_hint={'center_x': 0.5, 'center_y': 0.8},
+                color=(.9, 1, .9, .8),
+                font_size=dp(15),
             )
             title.bind(on_ref_press=partial(self.select_question, q))
             container.add_widget(title)
-            container.add_widget(Label(text=str(len(q['likes'])), pos_hint={'center_x': 0.1, 'center_y': 0.5}))
-            container.add_widget(Label(text=str(len(q['views'])), pos_hint={'center_x': 0.2, 'center_y': 0.5}))
-            container.add_widget(Label(text=tell_time_ago(q['creation_time']), pos_hint={'center_x': 0.8, 'center_y': 0.1}))
-            container.add_widget(Label(text=q['account']['user_name'], pos_hint={'center_x': 0.6, 'center_y': 0.1}))
+            container.add_widget(Label(text=str(len(q['likes'])), pos_hint={'center_x': 0.1, 'center_y': 0.65}))
+            container.add_widget(Label(text='Votes' if len(q['likes']) > 1 else 'Vote', pos_hint={'center_x': 0.1, 'center_y': 0.55}, font_size=dp(12)))
+            container.add_widget(Label(text=str(len(q['views'])), pos_hint={'center_x': 0.1, 'center_y': 0.4}))
+            container.add_widget(Label(text='Views' if len(q['views']) > 1 else 'View', pos_hint={'center_x': 0.1, 'center_y': 0.3}, font_size=dp(12)))
+            container.add_widget(Label(
+                text=tell_time_ago(q['creation_time']),
+                pos_hint={'center_x': 0.3, 'center_y': 0.1},
+                font_size=dp(12)
+            ))
+            container.add_widget(Label(
+                text=q['account']['user_name'],
+                pos_hint={'center_x': 0.5, 'center_y': 0.1},
+                font_size=dp(15),
+                color=(0, 1, .4, .8)
+
+            ))
             body.add_widget(container)
 
         scroll_view.add_widget(body)
@@ -121,8 +134,8 @@ class MainScreen(Screen):
         Window.add_widget(navigation_drawer)
 
     def select_question(self, *args):
-        global question
-        question = args[0]
+        global question_id
+        question_id = args[0]['id']
         switch_to_screen(QuestionScreen)
 
 
@@ -239,7 +252,7 @@ class QuestionScreen(Screen):
 
     def __init__(self):
         super(QuestionScreen, self).__init__()
-        if question:
+        if question_id:
             box_container = BoxLayout(orientation='vertical')
 
             header = GridLayout(cols=1, size_hint=(1, None), size=(Window.width, Window.height * .05))
@@ -267,7 +280,9 @@ class QuestionScreen(Screen):
                 Color(.65, .72, .66, .8)
                 body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=body.pos)
             body.bind(pos=update_rect, size=update_rect)
-
+            
+            question = get_question(question_id, me['id'])
+            
             question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
             title = Label(
                 text=question['title'],
@@ -289,7 +304,7 @@ class QuestionScreen(Screen):
             self.answer_input = TextInput(
                 hint_text='Write your answer',
                 size_hint=(None, None),
-                size=(Window.width / 1.3, Window.height / 2),
+                size=(Window.width / 2, Window.height / 2),
                 pos_hint={'center_x': 0.5, 'center_y': 0.5},
             )
             self.answer_input.bind(text=partial(self.update_input_text, 'answer'))
@@ -395,7 +410,7 @@ class SignUp(Screen):
         user_name_input = TextInput(
             hint_text='User Name',
             size_hint=(None, None),
-            size=(Window.width / 4, Window.height / 20),
+            size=(Window.width / 2, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.8}
         )
         user_name_input.bind(text=partial(self.update_input_text, 'user_name'))
@@ -404,7 +419,7 @@ class SignUp(Screen):
         password_input = TextInput(
             hint_text='Password',
             size_hint=(None, None),
-            size=(Window.width / 4, Window.height / 20),
+            size=(Window.width / 2, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.6},
             password=True
         )
@@ -414,7 +429,7 @@ class SignUp(Screen):
         repeat_password_input = TextInput(
             hint_text='Repeat Password',
             size_hint=(None, None),
-            size=(Window.width / 4, Window.height / 20),
+            size=(Window.width / 2, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
             password=True
         )
@@ -424,13 +439,31 @@ class SignUp(Screen):
         register_button = Button(
             text='Register',
             size_hint=(None, None),
-            size=(Window.width / 4, Window.height / 20),
+            size=(Window.width / 6, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.4},
             background_normal='',
             background_color=(.28, .40, .28, 1)
         )
         register_button.bind(on_press=self.register)
         container.add_widget(register_button)
+
+        login_label = Label(
+            text='Already a member?',
+            size_hint=(None, None),
+            size=(Window.width / 4, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.35},
+        )
+        container.add_widget(login_label)
+        login_button = Button(
+            text='Login',
+            size_hint=(None, None),
+            size=(Window.width / 6, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.20},
+            background_normal='',
+            background_color=(.28, .40, .28, 1)
+        )
+        login_button.bind(on_press=partial(switch_to_screen, SignIn))
+        container.add_widget(login_button)
 
         body.add_widget(container)
         root.add_widget(header)

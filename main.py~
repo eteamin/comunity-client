@@ -665,7 +665,7 @@ class CommunityApp(App):
         global me
         with open(config_file, 'r') as stream:
             me = yaml.load(stream)
-        if me and 'id' in me:
+        if me['id']:
             screen_manager.add_widget(MainScreen())
         else:
             screen_manager.add_widget(SignUp())

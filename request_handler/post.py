@@ -5,21 +5,26 @@ from variables import server_url
 
 def post_question(title, content, account_id, tags):
     params = {
+        'parent_id': None,
+        'post_type': 'Question',
         'title': title,
-        'content': content,
+        'description': content,
         'account_id': account_id,
         'tags': tags
     }
-    return post('%s/post/question' % server_url, data=params).json()
+    resp = post('%s/posts' % server_url, json=params)
+    return resp.json() if resp.status_code == 200 else None
 
 
 def post_answer(content, account_id, question_id):
     params = {
-        'content': content,
+        'post_type': 'Answer',
+        'description': content,
         'account_id': account_id,
-        'question_id': question_id
+        'parent_id': question_id
     }
-    return post('%s/post/answer' % server_url, data=params).json()
+    resp = post('%s/posts' % server_url, json=params)
+    return resp.json() if resp.status_code == 200 else None
 
 
 def post_comment(content, account_id, answer_id):

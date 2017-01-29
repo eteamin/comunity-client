@@ -6,6 +6,6 @@ def normalize_tags(tags):
      expected tags in string format separated by comma
 
     :return:
-    return a list containing tags
+    return string containing tags
     """
-    return [unicode.strip(t) for t in tags.split(',')]
+    return tags.replace('#', '').replace(' ', ',')

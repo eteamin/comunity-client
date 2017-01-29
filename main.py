@@ -150,7 +150,8 @@ class NewQuestionScreen(Screen):
     def __init__(self):
         super(NewQuestionScreen, self).__init__()
         global tags
-        tags = get_tags()
+        if not tags:
+            tags = get_tags()
 
         scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
         box_container = BoxLayout(orientation='vertical')
@@ -246,8 +247,8 @@ class NewQuestionScreen(Screen):
 
     def post_question(self, *args):
         tags = normalize_tags(self.tags_input_text)
-        server_resp = post_question(self.title_input_text, self.question_input_text, int(me['id']), tags=tags)
-        if server_resp['OK']:
+        resp = post_question(self.title_input_text, self.question_input_text, int(me['id']), tags=tags)
+        if resp:
             screen_manager.switch_to(MainScreen())
         # TODO: Implement handling of possible exceptions
 
@@ -368,8 +369,8 @@ class QuestionScreen(Screen):
             Window.add_widget(navigation_drawer)
 
     def submit_answer(self, *args):
-        resp = post_answer(self.answer_text, me['id'], question['id'])
-        if resp['OK']:
+        resp = post_answer(self.answer_text, me['id'], question_id)
+        if resp:
             switch_to_screen(QuestionScreen)
         # TODO: implement exception handling
 

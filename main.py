@@ -12,6 +12,8 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.dropdown import DropDown
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.widget import Widget
+from kivy.uix.popup import Popup
 from kivy.uix.button import Button
 from kivy.uix.image import Image
 from kivy.uix.label import Label
@@ -201,15 +203,17 @@ class NewQuestionScreen(Screen):
         sign_in.bind(on_press=self.post_question)
         container.add_widget(sign_in)
 
-        self.tag_input = TextInput(
+        self.tag_button = Button(
             hint_text='Tags',
             size_hint=(None, None),
             size=(Window.width / 1.3, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.15},
+            read_only=True
         )
-        self.tag_input.bind(text=self.on_type)
+        self.tag_button.bind(on_press=self.on_tag_selection)
+        self.tag_button.bind(text=partial(self.update_input_text, 'tags'))
 
-        container.add_widget(self.tag_input)
+        container.add_widget(self.tag_button)
 
         tag_help = Label(
             text='Question tags separated by comma. example: grammar, word meaning',
@@ -239,8 +243,6 @@ class NewQuestionScreen(Screen):
             self.title_input_text = value
         elif referer == 'question':
             self.question_input_text = value
-        elif referer == 'tag':
-            self.tags_input_text = value
 
     def post_question(self, *args):
         tags = normalize_tags(self.tags_input_text)
@@ -249,8 +251,33 @@ class NewQuestionScreen(Screen):
             screen_manager.switch_to(MainScreen())
         # TODO: Implement handling of possible exceptions
 
-    def on_type(self, instance, value):
-        print value
+    def on_tag_selection(self, *args):
+        content = BoxLayout()
+        if tags:
+            for t in tags:
+                name = t['name']
+                tag = Button(text=name)
+                tag.bind(on_press=partial(self.modify_tags_selection, name))
+                content.add_widget(tag)
+        ok_button = Button(text='OK', size_hint=(None, None), size=(150, 50))
+        content.add_widget(ok_button)
+
+        popup = Popup(
+            title='',
+            content=content,
+            size_hint=(None, None),
+            size=(350, 350),
+            auto_dismiss=True)
+        ok_button.bind(on_press=popup.dismiss)
+        popup.open()
+
+    def modify_tags_selection(self, *args):
+        tag_name = args[0]
+        if tag_name not in self.tags_input_text:
+            self.tags_input_text += '#%s ' % tag_name
+        else:
+            self.tags_input_text = self.tags_input_text.replace('#%s ' % tag_name, '')
+        self.tag_button.text = self.tags_input_text
 
 
 class QuestionScreen(Screen):

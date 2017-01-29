@@ -4,10 +4,9 @@ from datetime import datetime
 def tell_time_ago(basetime):
     date, time = basetime.split(' ')
     y, mth, d = date.split('-')
-    h, m, mss = time.split(':')
+    h, m, s = time.split(':')
     # mss == Second and millisecond
-    s, ms = mss.split('.')
-    given_time = datetime(int(y), int(mth), int(d), int(h), int(m), int(s), int(ms))
+    given_time = datetime(int(y), int(mth), int(d), int(h), int(m), int(s))
     difference = datetime.now() - given_time
 
     days = difference.days

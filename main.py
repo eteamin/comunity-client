@@ -1,7 +1,7 @@
 from functools import partial
 from os import path
 
-import yaml
+import json
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, Line
@@ -30,6 +30,7 @@ from variables import files_path
 me = None
 profile = None
 question_id = None
+tags = None
 
 config_file = path.abspath(path.join(path.dirname(__file__), 'configuration.yaml'))
 
@@ -102,17 +103,17 @@ class MainScreen(Screen):
             )
             title.bind(on_ref_press=partial(self.select_question, q))
             container.add_widget(title)
-            container.add_widget(Label(text=str(len(q['likes'])), pos_hint={'center_x': 0.1, 'center_y': 0.65}))
-            container.add_widget(Label(text='Votes' if len(q['likes']) > 1 else 'Vote', pos_hint={'center_x': 0.1, 'center_y': 0.55}, font_size=dp(12)))
+            container.add_widget(Label(text=str(len(q['votes'])), pos_hint={'center_x': 0.1, 'center_y': 0.65}))
+            container.add_widget(Label(text='Votes' if len(q['votes']) > 1 else 'Vote', pos_hint={'center_x': 0.1, 'center_y': 0.55}, font_size=dp(12)))
             container.add_widget(Label(text=str(len(q['views'])), pos_hint={'center_x': 0.1, 'center_y': 0.4}))
             container.add_widget(Label(text='Views' if len(q['views']) > 1 else 'View', pos_hint={'center_x': 0.1, 'center_y': 0.3}, font_size=dp(12)))
             container.add_widget(Label(
-                text=tell_time_ago(q['creation_time']),
+                text=tell_time_ago(q['creation_date']),
                 pos_hint={'center_x': 0.3, 'center_y': 0.1},
                 font_size=dp(12)
             ))
             container.add_widget(Label(
-                text=q['account']['user_name'],
+                text=q['accounts']['username'],
                 pos_hint={'center_x': 0.5, 'center_y': 0.1},
                 font_size=dp(15),
                 color=(0, 1, .4, .8)
@@ -146,6 +147,8 @@ class NewQuestionScreen(Screen):
 
     def __init__(self):
         super(NewQuestionScreen, self).__init__()
+        global tags
+        tags = get_tags()
 
         scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
         box_container = BoxLayout(orientation='vertical')
@@ -204,7 +207,7 @@ class NewQuestionScreen(Screen):
             size=(Window.width / 1.3, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.15},
         )
-        self.tag_input.bind(text=partial(self.update_input_text, 'tag'))
+        self.tag_input.bind(text=self.on_type)
 
         container.add_widget(self.tag_input)
 
@@ -245,6 +248,9 @@ class NewQuestionScreen(Screen):
         if server_resp['OK']:
             screen_manager.switch_to(MainScreen())
         # TODO: Implement handling of possible exceptions
+
+    def on_type(self, instance, value):
+        print value
 
 
 class QuestionScreen(Screen):
@@ -291,14 +297,14 @@ class QuestionScreen(Screen):
                 pos_hint={'center_x': 0.4, 'center_y': 0.8}
             )
             question_container.add_widget(title)
-            question_container.add_widget(Label(text=question['like'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
+            # question_container.add_widget(Label(text=question['votes'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
             # container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
-            question_container.add_widget(Label(text=question['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
+            question_container.add_widget(Label(text=question['creation_date'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
             body.add_widget(question_container)
 
             for a in get_answers(question['id']):
                 container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 4))
-                container.add_widget(Label(text=a['content']))
+                container.add_widget(Label(text=a['description']))
                 body.add_widget(container)
 
             self.answer_input = TextInput(
@@ -558,11 +564,11 @@ class SignIn(Screen):
         self.add_widget(root)
 
     def sign_in(self, *args):
-        server_resp = login(self.user_name_text, self.password_text)
-        if server_resp['OK']:
+        resp = login(self.user_name_text, self.password_text)
+        if resp:
             with open(config_file, 'w') as stream:
-                me = server_resp['Account']
-                yaml.dump(me, stream)
+                user_info = json.dumps(resp)
+                stream.write(user_info)
             screen_manager.switch_to(MainScreen())
         else:
             # TODO: notify
@@ -664,11 +670,13 @@ class CommunityApp(App):
     def on_start(self):
         global me
         with open(config_file, 'r') as stream:
-            me = yaml.load(stream)
-        if me and 'id' in me:
-            screen_manager.add_widget(MainScreen())
-        else:
-            screen_manager.add_widget(SignUp())
+            user_info = stream.read()
+            if user_info:
+                me = json.loads(user_info)
+                if me and 'id' in me:
+                    screen_manager.add_widget(MainScreen())
+            else:
+                screen_manager.add_widget(SignUp())
 
     def on_pause(self):
         return True

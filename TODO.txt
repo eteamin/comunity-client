@@ -1,7 +1,0 @@
-* post question and answer
-* pop up for alerts
-
-
-1. work on UX
-
-2. a separate class for header

@@ -23,14 +23,14 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 
 from drawer import NavigationDrawer
-from request_handler import get_questions, post_answer, get_notifications, post_image, get_tags, login, register, \
-    post_question, get_answers, get_question
+from request_handler import get_children, post_answer, get_notifications, post_image, login, register, \
+    post_question, get_question, get_questions, get_tags, get_user
 from helpers import normalize_tags, tell_time_ago
 from variables import files_path
 
 
 me = None
-profile = None
+user_id = None
 question_id = None
 tags = None
 
@@ -103,7 +103,7 @@ class MainScreen(Screen):
                 color=(.9, 1, .9, .8),
                 font_size=dp(15),
             )
-            title.bind(on_ref_press=partial(self.select_question, q))
+            title.bind(on_ref_press=partial(self.select_question, q['id']))
             container.add_widget(title)
             container.add_widget(Label(text=str(len(q['votes'])), pos_hint={'center_x': 0.1, 'center_y': 0.65}))
             container.add_widget(Label(text='Votes' if len(q['votes']) > 1 else 'Vote', pos_hint={'center_x': 0.1, 'center_y': 0.55}, font_size=dp(12)))
@@ -114,13 +114,14 @@ class MainScreen(Screen):
                 pos_hint={'center_x': 0.3, 'center_y': 0.1},
                 font_size=dp(12)
             ))
-            container.add_widget(Label(
-                text=q['accounts']['username'],
+            username = Label(
+                text="[ref=%s]%s[/ref]" % (q['accounts']['username'], q['accounts']['username']), markup=True,
                 pos_hint={'center_x': 0.5, 'center_y': 0.1},
                 font_size=dp(15),
                 color=(0, 1, .4, .8)
-
-            ))
+            )
+            username.bind(on_ref_press=partial(self.select_user, q['accounts']['id']))
+            container.add_widget(username)
             body.add_widget(container)
 
         scroll_view.add_widget(body)
@@ -131,15 +132,20 @@ class MainScreen(Screen):
 
         navigation_drawer = NavigationDrawer()
 
-        side_panel = ProfileScreen()
+        side_panel = SidePanel()
         navigation_drawer.add_widget(side_panel)
         navigation_drawer.add_widget(box_container)
         Window.add_widget(navigation_drawer)
 
     def select_question(self, *args):
         global question_id
-        question_id = args[0]['id']
+        question_id = args[0]
         switch_to_screen(QuestionScreen)
+
+    def select_user(self, *args):
+        global user_id
+        user_id = args[0]
+        switch_to_screen(UserScreen)
 
 
 class NewQuestionScreen(Screen):
@@ -231,7 +237,7 @@ class NewQuestionScreen(Screen):
 
         navigation_drawer = NavigationDrawer()
 
-        side_panel = ProfileScreen()
+        side_panel = SidePanel()
         navigation_drawer.add_widget(side_panel)
         navigation_drawer.add_widget(scroll_view)
         Window.add_widget(navigation_drawer)
@@ -330,9 +336,11 @@ class QuestionScreen(Screen):
             question_container.add_widget(Label(text=question['creation_date'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
             body.add_widget(question_container)
 
-            for a in get_answers(question['id']):
+            for a in get_children(question['id']):
                 container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 4))
                 container.add_widget(Label(text=a['description']))
+                for c in get_children(a['id']):
+                    pass
                 body.add_widget(container)
 
             self.answer_input = TextInput(
@@ -363,7 +371,7 @@ class QuestionScreen(Screen):
 
             navigation_drawer = NavigationDrawer()
 
-            side_panel = ProfileScreen()
+            side_panel = SidePanel()
             navigation_drawer.add_widget(side_panel)
             navigation_drawer.add_widget(box_container)
             Window.add_widget(navigation_drawer)
@@ -613,24 +621,16 @@ class SignIn(Screen):
 class UserScreen(Screen):
     def __init__(self):
         super(UserScreen, self).__init__()
-        root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
-        body = GridLayout(cols=1, spacing=2, size_hint_y=None)
-        body.bind(minimum_height=body.setter('height'))
+        global user_id
+        if user_id:
+            user = get_user(user_id)
 
-        container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
-        user_name = Label(text=me['user_name'])
-        container.add_widget(user_name)
-        # container.add_widget(Label(text=profile['age'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
-        # container.add_widget(Label(text=profile['gender'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
-        container.add_widget(Label(text=str(me['reputation']), pos_hint={'center_x': 0.8, 'center_y': 0.1}))
-        body.add_widget(container)
-        root.add_widget(body)
-        self.add_widget(root)
 
 
 class RankScreen(Screen):
     def __init__(self):
         super(RankScreen, self).__init__()
+
         root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
         box_container = BoxLayout(orientation='vertical')
 
@@ -656,11 +656,11 @@ class RankScreen(Screen):
         self.add_widget(root)
 
 
-class ProfileScreen(Screen):
+class SidePanel(Screen):
 
     def __init__(self):
-        super(ProfileScreen, self).__init__()
-        if me['id']:
+        super(SidePanel, self).__init__()
+        if me and me['id']:
             body = GridLayout(cols=1, spacing=2, size_hint=(1, None), size=(Window.width, Window.height))
             body.bind(minimum_height=body.setter('height'))
             container = RelativeLayout()

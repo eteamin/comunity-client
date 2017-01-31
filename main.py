@@ -1,7 +1,7 @@
 from functools import partial
 from os import path
-
 import json
+
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, Line
@@ -13,6 +13,7 @@ from kivy.uix.dropdown import DropDown
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.widget import Widget
+from kivy.uix.image import AsyncImage
 from kivy.uix.popup import Popup
 from kivy.uix.button import Button
 from kivy.uix.image import Image
@@ -21,6 +22,7 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
+from requests.exceptions import ConnectionError
 
 from drawer import NavigationDrawer
 from request_handler import get_children, post_answer, get_notifications, post_image, login, register, \
@@ -66,10 +68,10 @@ class MainScreen(Screen):
 
         header = GridLayout(cols=1, size_hint=(1, None), size=(Window.width, Window.height * .05))
         with header.canvas.before:
-            Color(.28, .40, .28, .8)
+            Color(0.3, 0.7, 0.9, .7)
             header.rect = Rectangle(size=header.size, pos=header.pos)
         header.bind(pos=update_rect, size=update_rect)
-        header.add_widget(Label(text='Question'))
+        header.add_widget(Label(text='Questions'))
 
         nav_bar = GridLayout(cols=3, size_hint=(1, None), size=(Window.width, Window.height * .05))
         with nav_bar.canvas.before:
@@ -93,36 +95,58 @@ class MainScreen(Screen):
             body.rect = Rectangle(size=(Window.width, Window.height), pos=body.pos)
         body.bind(pos=update_rect, size=update_rect)
 
-        for q in get_questions():
+        try:
+            questions = get_questions()
+        except ConnectionError:
+            return
+        for q in questions:
             container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 4))
+            with container.canvas.before:
+                Line(points=[container.x, container.x, container.width / 2, container.x, 0, 0], width=1)
 
             title = Label(
                 text='[ref=%s]%s[/ref]' % (q['title'], q['title']),
                 markup=True,
-                pos_hint={'center_x': 0.5, 'center_y': 0.8},
-                color=(.9, 1, .9, .8),
+                pos_hint={'center_x': 1, 'center_y': 1.2},
+                color=(0.5, 0.7, 1, 1),
                 font_size=dp(15),
+                underline=True,
+                halign='left',
+                valgin='middle',
+                outline_width=300
             )
+            title.text_size = container.size
             title.bind(on_ref_press=partial(self.select_question, q['id']))
             container.add_widget(title)
             container.add_widget(Label(text=str(len(q['votes'])), pos_hint={'center_x': 0.1, 'center_y': 0.65}))
             container.add_widget(Label(text='Votes' if len(q['votes']) > 1 else 'Vote', pos_hint={'center_x': 0.1, 'center_y': 0.55}, font_size=dp(12)))
             container.add_widget(Label(text=str(len(q['views'])), pos_hint={'center_x': 0.1, 'center_y': 0.4}))
             container.add_widget(Label(text='Views' if len(q['views']) > 1 else 'View', pos_hint={'center_x': 0.1, 'center_y': 0.3}, font_size=dp(12)))
-            container.add_widget(Label(
+            creation_date = Label(
                 text=tell_time_ago(q['creation_date']),
-                pos_hint={'center_x': 0.3, 'center_y': 0.1},
-                font_size=dp(12)
-            ))
+                pos_hint={'center_x': 0.6, 'center_y': 0.39},
+                font_size=dp(12),
+                halign='left'
+            )
+            creation_date.text_size = creation_date.size
+            container.add_widget(creation_date)
             username = Label(
                 text="[ref=%s]%s[/ref]" % (q['accounts']['username'], q['accounts']['username']), markup=True,
-                pos_hint={'center_x': 0.5, 'center_y': 0.1},
+                pos_hint={'center_x': 0.8, 'center_y': 0.1},
                 font_size=dp(15),
                 color=(0, 1, .4, .8)
             )
             username.bind(on_ref_press=partial(self.select_user, q['accounts']['id']))
             container.add_widget(username)
+            user_image = AsyncImage(
+                source='http://localhost:8080/1.png',
+                pos_hint={'center_x': 0.8, 'center_y': 0.39},
+                size_hint=(None, None),
+                size=(75, 75)
+            )
+            container.add_widget(user_image)
             body.add_widget(container)
+
 
         scroll_view.add_widget(body)
 
@@ -346,7 +370,7 @@ class QuestionScreen(Screen):
             self.answer_input = TextInput(
                 hint_text='Write your answer',
                 size_hint=(None, None),
-                size=(Window.width / 2, Window.height / 2),
+                size=(Window.width, Window.height / 2),
                 pos_hint={'center_x': 0.5, 'center_y': 0.5},
             )
             self.answer_input.bind(text=partial(self.update_input_text, 'answer'))
@@ -355,7 +379,7 @@ class QuestionScreen(Screen):
             submit = Button(
                 text='Submit',
                 size_hint=(None, None),
-                size=(Window.width / 4, Window.height / 20),
+                size=(Window.width, Window.height / 20),
                 pos_hint={'center_x': 0.5, 'center_y': 0.05},
                 background_normal='',
                 background_color=(.28, .40, .28, 1)
@@ -624,7 +648,41 @@ class UserScreen(Screen):
         global user_id
         if user_id:
             user = get_user(user_id)
+            scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+            box_container = BoxLayout(orientation='vertical')
 
+            header = GridLayout(cols=1, size_hint=(1, .05))
+            with header.canvas.before:
+                Color(.28, .40, .28, .8)
+                header.rect = Rectangle(size=header.size, pos=header.pos)
+            header.bind(pos=update_rect, size=update_rect)
+            header.add_widget(Label(text='%s Profile' % user['username']))
+
+            body = GridLayout(cols=1, spacing=2, size_hint=(1, .90))
+            body.bind(minimum_height=body.setter('height'))
+
+            with body.canvas.before:
+                Color(.65, .72, .66, .8)
+                body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=body.pos)
+            body.bind(pos=update_rect, size=update_rect)
+
+            container = RelativeLayout()
+
+
+
+            body.add_widget(container)
+
+            box_container.add_widget(header)
+            box_container.add_widget(body)
+
+            scroll_view.add_widget(box_container)
+
+            navigation_drawer = NavigationDrawer()
+
+            side_panel = SidePanel()
+            navigation_drawer.add_widget(side_panel)
+            navigation_drawer.add_widget(scroll_view)
+            Window.add_widget(navigation_drawer)
 
 
 class RankScreen(Screen):

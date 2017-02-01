@@ -135,7 +135,7 @@ class MainScreen(Screen):
                 tag = Button(
                     text=t['name'],
                     size_hint=(None, None),
-                    size=(75, 25),
+                    size=(Window.width / 10, Window.height / 20),
                     font_size=dp(10),
                 )
                 # tag.text_size = tag.size
@@ -158,10 +158,10 @@ class MainScreen(Screen):
             username.bind(on_ref_press=partial(self.select_user, q['accounts']['id']))
             container.add_widget(username)
             user_image = AsyncImage(
-                source='http://192.168.43.150:8080/1.png',
+                source='http://localhost:8080/1.png',
                 pos_hint={'center_x': 0.8, 'center_y': 0.39},
                 size_hint=(None, None),
-                size=(75, 75)
+                size=(Window.width / 8, Window.height / 8)
             )
             container.add_widget(user_image)
             body.add_widget(container)

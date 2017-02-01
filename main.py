@@ -21,7 +21,7 @@ from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
-from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
+from kivy.uix.screenmanager import ScreenManager, Screen, NoTransition
 from requests.exceptions import ConnectionError
 
 from drawer import NavigationDrawer
@@ -38,7 +38,7 @@ tags = None
 
 config_file = path.abspath(path.join(path.dirname(__file__), 'configuration.yaml'))
 
-screen_manager = ScreenManager(transition=SlideTransition())
+screen_manager = ScreenManager(transition=NoTransition())
 
 
 def update_rect(instance, value):
@@ -102,26 +102,45 @@ class MainScreen(Screen):
         for q in questions:
             container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 4))
             with container.canvas.before:
-                Line(points=[container.x, container.x, container.width / 2, container.x, 0, 0], width=1)
+                Line(points=[container.x, container.x, container.width, container.x, 0, 0], width=1)
 
             title = Label(
                 text='[ref=%s]%s[/ref]' % (q['title'], q['title']),
                 markup=True,
-                pos_hint={'center_x': 1, 'center_y': 1.2},
+                pos_hint={'center_x': 0.55, 'center_y': 1},
                 color=(0.5, 0.7, 1, 1),
                 font_size=dp(15),
                 underline=True,
                 halign='left',
                 valgin='middle',
-                outline_width=300
+                outline_width=500
             )
-            title.text_size = container.size
+            # print title.size
+            title.text_size = [500, 100]
             title.bind(on_ref_press=partial(self.select_question, q['id']))
             container.add_widget(title)
             container.add_widget(Label(text=str(len(q['votes'])), pos_hint={'center_x': 0.1, 'center_y': 0.65}))
             container.add_widget(Label(text='Votes' if len(q['votes']) > 1 else 'Vote', pos_hint={'center_x': 0.1, 'center_y': 0.55}, font_size=dp(12)))
             container.add_widget(Label(text=str(len(q['views'])), pos_hint={'center_x': 0.1, 'center_y': 0.4}))
             container.add_widget(Label(text='Views' if len(q['views']) > 1 else 'View', pos_hint={'center_x': 0.1, 'center_y': 0.3}, font_size=dp(12)))
+
+            # Handle tags
+            tags_container = BoxLayout(
+                orientation='horizontal',
+                size_hint=(None, None),
+                size=(Window.width * .05, Window.height * .05),
+                pos_hint={'center_x': 0.2, 'center_y': 0.5}
+            )
+            for t in q['tags']:
+                tag = Button(
+                    text=t['name'],
+                    size_hint=(None, None),
+                    size=(75, 25),
+                    font_size=dp(10),
+                )
+                # tag.text_size = tag.size
+                tags_container.add_widget(tag)
+            container.add_widget(tags_container)
             creation_date = Label(
                 text=tell_time_ago(q['creation_date']),
                 pos_hint={'center_x': 0.6, 'center_y': 0.39},
@@ -139,14 +158,13 @@ class MainScreen(Screen):
             username.bind(on_ref_press=partial(self.select_user, q['accounts']['id']))
             container.add_widget(username)
             user_image = AsyncImage(
-                source='http://localhost:8080/1.png',
+                source='http://192.168.43.150:8080/1.png',
                 pos_hint={'center_x': 0.8, 'center_y': 0.39},
                 size_hint=(None, None),
                 size=(75, 75)
             )
             container.add_widget(user_image)
             body.add_widget(container)
-
 
         scroll_view.add_widget(body)
 
@@ -192,6 +210,19 @@ class NewQuestionScreen(Screen):
             header.rect = Rectangle(size=header.size, pos=header.pos)
         header.bind(pos=update_rect, size=update_rect)
         header.add_widget(Label(text='Question'))
+
+        nav_bar = GridLayout(cols=3, size_hint=(1, None), size=(Window.width, Window.height * .05))
+        with nav_bar.canvas.before:
+            Color(.9, .9, .9, .8)
+            nav_bar.rect = Rectangle(size=nav_bar.size, pos=nav_bar.pos)
+        nav_bar.bind(pos=update_rect, size=update_rect)
+
+        ask_question_label = Label(text='[ref=Ask a Question]Ask a Question[/ref]', markup=True)
+        ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen))
+        nav_bar.add_widget(ask_question_label)
+        need_help_label = Label(text='[ref=Need Help?]Need Help?[/ref]', markup=True)
+        need_help_label.bind(on_ref_press=partial(switch_to_screen, MainScreen))
+        nav_bar.add_widget(need_help_label)
 
         body = GridLayout(cols=1, spacing=2, size_hint=(1, .90))
         body.bind(minimum_height=body.setter('height'))
@@ -255,6 +286,7 @@ class NewQuestionScreen(Screen):
         body.add_widget(container)
 
         box_container.add_widget(header)
+        box_container.add_widget(nav_bar)
         box_container.add_widget(body)
 
         scroll_view.add_widget(box_container)
@@ -335,6 +367,9 @@ class QuestionScreen(Screen):
             ask_question_label = Label(text='[ref=Ask a Question]Ask a Question[/ref]', markup=True)
             ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen))
             nav_bar.add_widget(ask_question_label)
+            need_help_label = Label(text='[ref=Need Help?]Need Help?[/ref]', markup=True)
+            need_help_label.bind(on_ref_press=partial(switch_to_screen, MainScreen))
+            nav_bar.add_widget(need_help_label)
 
             scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
             body = GridLayout(cols=1, spacing=2, size_hint_y=None)

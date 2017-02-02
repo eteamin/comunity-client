@@ -61,9 +61,10 @@ def update_rect(instance, value):
 
 
 class MainScreen(Screen):
-    def __init__(self):
-        super(MainScreen, self).__init__()
 
+    def __init__(self, name):
+        super(MainScreen, self).__init__()
+        self.name = name
         box_container = BoxLayout(orientation='vertical')
 
         header = GridLayout(cols=1, size_hint=(1, None), size=(Window.width, Window.height * .05))
@@ -80,7 +81,7 @@ class MainScreen(Screen):
         nav_bar.bind(pos=update_rect, size=update_rect)
 
         ask_question_label = Label(text='[ref=Ask a Question]Ask a Question[/ref]', markup=True)
-        ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen))
+        ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen, 'new_question'))
         nav_bar.add_widget(ask_question_label)
         need_help_label = Label(text='[ref=Need Help?]Need Help?[/ref]', markup=True)
         # need_help_label.bind(on_ref_press=partial(switch_to_screen, MainScreen))
@@ -116,6 +117,7 @@ class MainScreen(Screen):
                 outline_width=500
             )
             # print title.size
+            # TODO: never ever do this again
             title.text_size = [500, 100]
             title.bind(on_ref_press=partial(self.select_question, q['id']))
             container.add_widget(title)
@@ -182,7 +184,7 @@ class MainScreen(Screen):
     def select_question(self, *args):
         global question_id
         question_id = args[0]
-        switch_to_screen(QuestionScreen)
+        switch_to_screen(QuestionScreen, 'question')
 
     def select_user(self, *args):
         global user_id
@@ -195,8 +197,10 @@ class NewQuestionScreen(Screen):
     question_input_text = ''
     tags_input_text = ''
 
-    def __init__(self):
+    def __init__(self, name):
         super(NewQuestionScreen, self).__init__()
+        self.name = name
+        print self.name + 'is called'
         global tags
         if not tags:
             tags = get_tags()
@@ -218,10 +222,10 @@ class NewQuestionScreen(Screen):
         nav_bar.bind(pos=update_rect, size=update_rect)
 
         ask_question_label = Label(text='[ref=Ask a Question]Ask a Question[/ref]', markup=True)
-        ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen))
+        ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen, 'new_question'))
         nav_bar.add_widget(ask_question_label)
         need_help_label = Label(text='[ref=Need Help?]Need Help?[/ref]', markup=True)
-        need_help_label.bind(on_ref_press=partial(switch_to_screen, MainScreen))
+        need_help_label.bind(on_ref_press=partial(switch_to_screen, MainScreen, 'main'))
         nav_bar.add_widget(need_help_label)
 
         body = GridLayout(cols=1, spacing=2, size_hint=(1, .90))
@@ -346,8 +350,10 @@ class NewQuestionScreen(Screen):
 class QuestionScreen(Screen):
     answer_text = ''
 
-    def __init__(self):
+    def __init__(self, name):
         super(QuestionScreen, self).__init__()
+        self.name = name
+        print self.name + 'is called'
         if question_id:
             box_container = BoxLayout(orientation='vertical')
 
@@ -365,10 +371,10 @@ class QuestionScreen(Screen):
             nav_bar.bind(pos=update_rect, size=update_rect)
 
             ask_question_label = Label(text='[ref=Ask a Question]Ask a Question[/ref]', markup=True)
-            ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen))
+            ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen, 'new_question'))
             nav_bar.add_widget(ask_question_label)
             need_help_label = Label(text='[ref=Need Help?]Need Help?[/ref]', markup=True)
-            need_help_label.bind(on_ref_press=partial(switch_to_screen, MainScreen))
+            need_help_label.bind(on_ref_press=partial(switch_to_screen, MainScreen, 'main'))
             nav_bar.add_widget(need_help_label)
 
             scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
@@ -486,7 +492,7 @@ class SignUp(Screen):
             Color(.28, .40, .28, .8)
             header.rect = Rectangle(size=header.size, pos=header.pos)
         header.bind(pos=update_rect, size=update_rect)
-        header.add_widget(Label(text='Question'))
+        header.add_widget(Label(text='Community'))
 
         body = GridLayout(cols=1, spacing=2, size_hint=(1, .9))
         body.bind(minimum_height=body.setter('height'))
@@ -511,7 +517,7 @@ class SignUp(Screen):
         user_name_input = TextInput(
             hint_text='User Name',
             size_hint=(None, None),
-            size=(Window.width / 2, Window.height / 20),
+            size=(Window.width / 1.2, Window.height / 20),
             pos_hint={'center_x': 0.5, 'center_y': 0.8}
         )
         user_name_input.bind(text=partial(self.update_input_text, 'user_name'))
@@ -520,8 +526,8 @@ class SignUp(Screen):
         password_input = TextInput(
             hint_text='Password',
             size_hint=(None, None),
-            size=(Window.width / 2, Window.height / 20),
-            pos_hint={'center_x': 0.5, 'center_y': 0.6},
+            size=(Window.width / 1.2, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.7},
             password=True
         )
         password_input.bind(text=partial(self.update_input_text, 'password'))
@@ -530,8 +536,8 @@ class SignUp(Screen):
         repeat_password_input = TextInput(
             hint_text='Repeat Password',
             size_hint=(None, None),
-            size=(Window.width / 2, Window.height / 20),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            size=(Window.width / 1.2, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.6},
             password=True
         )
         repeat_password_input.bind(text=partial(self.update_input_text, 'repeat_password'))
@@ -541,7 +547,7 @@ class SignUp(Screen):
             text='Register',
             size_hint=(None, None),
             size=(Window.width / 6, Window.height / 20),
-            pos_hint={'center_x': 0.5, 'center_y': 0.4},
+            pos_hint={'center_x': 0.5, 'center_y': 0.45},
             background_normal='',
             background_color=(.28, .40, .28, 1)
         )
@@ -559,7 +565,7 @@ class SignUp(Screen):
             text='Login',
             size_hint=(None, None),
             size=(Window.width / 6, Window.height / 20),
-            pos_hint={'center_x': 0.5, 'center_y': 0.20},
+            pos_hint={'center_x': 0.5, 'center_y': 0.25},
             background_normal='',
             background_color=(.28, .40, .28, 1)
         )
@@ -592,7 +598,12 @@ class SignUp(Screen):
 
 
 def switch_to_screen(*args):
-    screen_manager.switch_to(args[0]())
+    screen_obj = args[0]
+    screen_name = args[1]
+    if issubclass(screen_obj, Screen):
+        screen_manager.add_widget(screen_obj(name=screen_name)) if screen_name not in screen_manager.screen_names else None
+        screen_manager.current = screen_name
+    print screen_manager.screen_names
 
 
 class SignIn(Screen):
@@ -795,7 +806,7 @@ class CommunityApp(App):
             if user_info:
                 me = json.loads(user_info)
                 if me and 'id' in me:
-                    screen_manager.add_widget(MainScreen())
+                    screen_manager.add_widget(MainScreen(name='main'))
             else:
                 screen_manager.add_widget(SignUp())
 

@@ -120,6 +120,7 @@ class MainScreen(Screen):
             # TODO: never ever do this again
             title.text_size = [500, 100]
             title.bind(on_ref_press=partial(self.select_question, q['id']))
+            # title.on_touch_down()
             container.add_widget(title)
             container.add_widget(Label(text=str(len(q['votes'])), pos_hint={'center_x': 0.1, 'center_y': 0.65}))
             container.add_widget(Label(text='Votes' if len(q['votes']) > 1 else 'Vote', pos_hint={'center_x': 0.1, 'center_y': 0.55}, font_size=dp(12)))
@@ -200,7 +201,6 @@ class NewQuestionScreen(Screen):
     def __init__(self, name):
         super(NewQuestionScreen, self).__init__()
         self.name = name
-        print self.name + 'is called'
         global tags
         if not tags:
             tags = get_tags()

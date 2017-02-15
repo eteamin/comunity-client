@@ -13,4 +13,4 @@ def login(user_name, password):
 
 
 def register(user_name, password):
-    return post('%s/account/sign_up' % server_url, data={'username': user_name, 'password': password}).json()
+    return post('%s/users/register' % server_url, data={'username': user_name, 'password': password}).json()

@@ -1,0 +1,13 @@
+        self.texture = Texture.create(size=(3, 1), colorfmt="rgb")
+        pixels = bytes([int(v * 255) for v in (0.0, 0.0, 0.0)])
+        buf = ''.join(pixels)
+        self.texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
+        self.canvas_move_direction = 'to_left'
+
+        body = GridLayout(cols=1, spacing=2, size_hint=(1, 1))
+        body.bind(minimum_height=body.setter('height'))
+        with body.canvas.before:
+            self.canvas_size = (5000, 1000)
+            self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=self.texture)
+        body.bind(pos=update_rect, size=update_rect)
+        self.event = Clock.schedule_interval(self.update_texture, EVENT_INTERVAL_RATE)

@@ -1,4 +1,6 @@
 from functools import partial
+from random import uniform as u
+from itertools import chain
 from os import path
 import json
 
@@ -9,6 +11,7 @@ from kivy.lang import Builder
 from kivy.metrics import dp
 from kivy.properties import StringProperty, ReferenceListProperty
 from kivy.uix.boxlayout import BoxLayout
+from kivy.graphics.texture import Texture
 from kivy.uix.dropdown import DropDown
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.gridlayout import GridLayout
@@ -18,6 +21,7 @@ from kivy.uix.popup import Popup
 from kivy.uix.button import Button
 from kivy.uix.image import Image
 from kivy.uix.label import Label
+from kivy.clock import Clock
 from kivy.uix.textinput import TextInput
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
@@ -35,6 +39,8 @@ me = None
 user_id = None
 question_id = None
 tags = None
+EVENT_INTERVAL_RATE = 0.1
+step = 25
 
 config_file = path.abspath(path.join(path.dirname(__file__), 'configuration.yaml'))
 
@@ -58,7 +64,6 @@ def update_rect(instance, value):
 #
 #         self.bind(pos=update_rect, size=update_rect)
 #         self.add_widget(Label(text='Question'))
-
 
 class MainScreen(Screen):
 
@@ -487,22 +492,23 @@ class SignUp(Screen):
         super(SignUp, self).__init__()
         root = BoxLayout(orientation='vertical')
 
-        header = GridLayout(cols=1, size_hint=(1, .1))
-        with header.canvas.before:
-            Color(.28, .40, .28, .8)
-            header.rect = Rectangle(size=header.size, pos=header.pos)
-        header.bind(pos=update_rect, size=update_rect)
-        header.add_widget(Label(text='Community'))
+        self.texture = Texture.create(size=(3, 1), colorfmt="rgb")
+        pixels = bytes([int(v * 255) for v in (0.0, 0.0, 0.0)])
+        buf = ''.join(pixels)
+        self.texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
+        self.canvas_move_direction = 'to_left'
 
-        body = GridLayout(cols=1, spacing=2, size_hint=(1, .9))
+        body = GridLayout(cols=1, spacing=2, size_hint=(1, 1))
         body.bind(minimum_height=body.setter('height'))
         with body.canvas.before:
-            Color(.65, .72, .66, .8)
-            body.rect = Rectangle(size=body.size, pos=body.pos)
-        body.bind(pos=update_rect, size=update_rect)
+            self.canvas_size = (5000, 1000)
+            self.revert_point = -3800
+            self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=self.texture)
+        # body.bind(pos=update_rect, size=update_rect)
+        self.event = Clock.schedule_interval(self.update_canvas, EVENT_INTERVAL_RATE)
 
         container = RelativeLayout()
-        title = Label(text='Sign Up', pos_hint={'center_x': 0.5, 'center_y': 0.9})
+        title = Label(text="Haven't joined our community yet?!", pos_hint={'center_x': 0.5, 'center_y': 0.9})
         container.add_widget(title)
 
         self.notification_label = Label(
@@ -516,8 +522,10 @@ class SignUp(Screen):
 
         user_name_input = TextInput(
             hint_text='User Name',
+            hint_text_color=[0.2, 0.3, 0.3, 0.9],
+            padding_x=[20, 0],
             size_hint=(None, None),
-            size=(Window.width / 1.2, Window.height / 20),
+            size=(Window.width / 1.2, Window.height / 12),
             pos_hint={'center_x': 0.5, 'center_y': 0.8}
         )
         user_name_input.bind(text=partial(self.update_input_text, 'user_name'))
@@ -525,8 +533,10 @@ class SignUp(Screen):
 
         password_input = TextInput(
             hint_text='Password',
+            hint_text_color=[0.2, 0.3, 0.3, 0.9],
+            padding_x=[20, 0],
             size_hint=(None, None),
-            size=(Window.width / 1.2, Window.height / 20),
+            size=(Window.width / 1.2, Window.height / 12),
             pos_hint={'center_x': 0.5, 'center_y': 0.7},
             password=True
         )
@@ -535,8 +545,10 @@ class SignUp(Screen):
 
         repeat_password_input = TextInput(
             hint_text='Repeat Password',
+            hint_text_color=[0.2, 0.3, 0.3, 0.9],
+            padding_x=[20, 0],
             size_hint=(None, None),
-            size=(Window.width / 1.2, Window.height / 20),
+            size=(Window.width / 1.2, Window.height / 12),
             pos_hint={'center_x': 0.5, 'center_y': 0.6},
             password=True
         )
@@ -546,7 +558,7 @@ class SignUp(Screen):
         register_button = Button(
             text='Register',
             size_hint=(None, None),
-            size=(Window.width / 6, Window.height / 20),
+            size=(Window.width / 1.2, Window.height / 12),
             pos_hint={'center_x': 0.5, 'center_y': 0.45},
             background_normal='',
             background_color=(.28, .40, .28, 1)
@@ -557,25 +569,33 @@ class SignUp(Screen):
         login_label = Label(
             text='Already a member?',
             size_hint=(None, None),
-            size=(Window.width / 4, Window.height / 20),
+            size=(Window.width / 1.2, Window.height / 12),
             pos_hint={'center_x': 0.5, 'center_y': 0.35},
         )
         container.add_widget(login_label)
         login_button = Button(
             text='Login',
             size_hint=(None, None),
-            size=(Window.width / 6, Window.height / 20),
+            size=(Window.width / 1.2, Window.height / 12),
             pos_hint={'center_x': 0.5, 'center_y': 0.25},
             background_normal='',
             background_color=(.28, .40, .28, 1)
         )
-        login_button.bind(on_press=partial(switch_to_screen, SignIn))
+        login_button.bind(on_press=partial(switch_to_screen, SignIn, 'sign_in'))
         container.add_widget(login_button)
 
         body.add_widget(container)
-        root.add_widget(header)
         root.add_widget(body)
         self.add_widget(root)
+
+    # noinspection PyUnusedLocal
+    def update_canvas(self, dt):
+        if self.rect.pos[0] == self.revert_point:  # Canvas ends at -5000 so we move back before dark part appears
+            self.canvas_move_direction = 'to_right'
+        if self.canvas_move_direction == 'to_right' and self.rect.pos[0] == 0:
+            self.canvas_move_direction = 'to_left'
+        x = self.rect.pos[0]
+        self.rect.pos = (x - step, self.y) if self.canvas_move_direction == 'to_left' else (x + step, self.y)
 
     def update_input_text(self, *args):
         referer = args[0]
@@ -594,7 +614,7 @@ class SignUp(Screen):
     def register(self, *args):
         if register(self.user_name_text, self.password_text)['OK']:
             self.update_notif_text('Registration Complete! Tap Here to Login')
-            self.notification_label.bind(on_ref_press=partial(switch_to_screen, SignIn))
+            self.notification_label.bind(on_ref_press=partial(switch_to_screen, SignIn, 'sign_in'))
 
 
 def switch_to_screen(*args):
@@ -610,8 +630,9 @@ class SignIn(Screen):
     user_name_text = ''
     password_text = ''
 
-    def __init__(self):
+    def __init__(self, name):
         super(SignIn, self).__init__()
+        self.name = name
         root = BoxLayout(orientation='vertical')
         header = GridLayout(cols=1, size_hint=(1, .1))
 

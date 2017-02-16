@@ -18,7 +18,7 @@ step = 25
 class MyWidget(Widget):
     def __init__(self, **args):
         super(MyWidget, self).__init__(**args)
-        self.texture = Texture.create(size=(3, 1), colorfmt="rgb")
+        self.texture = Texture.create(size=(4, 3), colorfmt="rgb")
         pixels = bytes([int(v * 255) for v in (0.0, 0.0, 0.0)])
         buf = ''.join(pixels)
         self.texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
@@ -30,12 +30,30 @@ class MyWidget(Widget):
     #
     # # noinspection PyUnusedLocal
     # def update_texture(self, dt):
-    #     if self.rect.pos[0] == -4200:
-    #         self.canvas_move_direction = 'to_right'
-    #     if self.canvas_move_direction == 'to_right' and self.rect.pos[0] == 0:
-    #         self.canvas_move_direction = 'to_left'
     #     x = self.rect.pos[0]
-    #     self.rect.pos = (x - step, self.y) if self.canvas_move_direction == 'to_left' else (x + step, self.y)
+    #     y = self.rect.pos[1]
+    #     print x, y
+    #     if x == -4200 and y == 0:
+    #         self.canvas_move_direction = 'to_down'
+    #     elif x == -4200 and y == -1000:
+    #         self.canvas_move_direction = 'to_right'
+    #     elif x == 0 and y == -1000:
+    #         self.canvas_move_direction = 'to_up'
+    #     elif x == 0 and y == 0:
+    #         self.canvas_move_direction = 'to_left'
+    #     self.move_canvas(x, y)
+    #
+    # def move_canvas(self, x, y):
+    #     direction = self.canvas_move_direction
+    #     if direction == 'to_left':
+    #         self.rect.pos = x - step, y
+    #     elif direction == 'to_right':
+    #         self.rect.pos = x + step, y
+    #     elif direction == 'to_up':
+    #         self.rect.pos = x, y + step
+    #     elif direction == 'to_down':
+    #         self.rect.pos = x, y - step
+    #
 
 
 class TestApp(App):

@@ -18,42 +18,42 @@ step = 25
 class MyWidget(Widget):
     def __init__(self, **args):
         super(MyWidget, self).__init__(**args)
-        self.texture = Texture.create(size=(4, 3), colorfmt="rgb")
+        self.texture = Texture.create(size=(3, 3), colorfmt="rgb")
         pixels = bytes([int(v * 255) for v in (0.0, 0.0, 0.0)])
         buf = ''.join(pixels)
         self.texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
         with self.canvas:
-            self.canvas_size = (1000, 1000)
+            self.canvas_size = (5000, 5000)
             self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=self.texture)
         self.canvas_move_direction = 'to_left'
-    #     self.event = Clock.schedule_interval(self.update_texture, EVENT_INTERVAL_RATE)
+        self.event = Clock.schedule_interval(self.update_texture, EVENT_INTERVAL_RATE)
     #
-    # # noinspection PyUnusedLocal
-    # def update_texture(self, dt):
-    #     x = self.rect.pos[0]
-    #     y = self.rect.pos[1]
-    #     print x, y
-    #     if x == -4200 and y == 0:
-    #         self.canvas_move_direction = 'to_down'
-    #     elif x == -4200 and y == -1000:
-    #         self.canvas_move_direction = 'to_right'
-    #     elif x == 0 and y == -1000:
-    #         self.canvas_move_direction = 'to_up'
-    #     elif x == 0 and y == 0:
-    #         self.canvas_move_direction = 'to_left'
-    #     self.move_canvas(x, y)
-    #
-    # def move_canvas(self, x, y):
-    #     direction = self.canvas_move_direction
-    #     if direction == 'to_left':
-    #         self.rect.pos = x - step, y
-    #     elif direction == 'to_right':
-    #         self.rect.pos = x + step, y
-    #     elif direction == 'to_up':
-    #         self.rect.pos = x, y + step
-    #     elif direction == 'to_down':
-    #         self.rect.pos = x, y - step
-    #
+    # noinspection PyUnusedLocal
+    def update_texture(self, dt):
+        x = self.rect.pos[0]
+        y = self.rect.pos[1]
+        print x, y
+        if x == -4200 and y == 0 and self.canvas_move_direction == 'to_up':
+            self.canvas_move_direction = 'to_right'
+        elif x == -4200 and y == 0:
+            self.canvas_move_direction = 'to_down'
+        elif x == -4200 and y == -1000:
+            self.canvas_move_direction = 'to_up'
+        elif x == 0 and y == 0:
+            self.canvas_move_direction = 'to_left'
+        self.move_canvas(x, y)
+
+    def move_canvas(self, x, y):
+        direction = self.canvas_move_direction
+        if direction == 'to_left':
+            self.rect.pos = x - step, y
+        elif direction == 'to_right':
+            self.rect.pos = x + step, y
+        elif direction == 'to_up':
+            self.rect.pos = x, y + step
+        elif direction == 'to_down':
+            self.rect.pos = x, y - step
+
 
 
 class TestApp(App):

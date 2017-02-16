@@ -1,6 +1,6 @@
 from requests import get
 
-from variables import server_url, files_path, question_range, make_headers
+from variables import server_url, question_range, make_headers
 
 
 def get_questions():
@@ -34,8 +34,8 @@ def get_user(user_id):
     resp = get('%s/accounts/%s' % (server_url, user_id), headers=make_headers())
     return resp.json()['account'] if resp.status_code == 200 else None
 
-
-def get_image(account_id):
-    image = get('%s/get/image/%s' % (server_url, account_id), headers=make_headers())
-    with open('%s/%s.jpg' % (files_path, account_id), 'w') as user_image:
-        user_image.write(image.content)
+#
+# def get_image(account_id):
+#     image = get('%s/get/image/%s' % (server_url, account_id), headers=make_headers())
+#     with open('%s/%s.jpg' % (files_path, account_id), 'w') as user_image:
+#         user_image.write(image.content)

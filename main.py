@@ -31,7 +31,6 @@ from requests.exceptions import ConnectionError
 from drawer import NavigationDrawer
 from request_handler import *
 from helpers import normalize_tags, tell_time_ago, find_step
-from variables import files_path
 
 
 me = None
@@ -41,10 +40,11 @@ tags = None
 EVENT_INTERVAL_RATE = 0.1
 
 canvas_x_revert_point = Window.width * 4
-canvas_y_revert_point = Window.height * 2.5
+canvas_y_revert_point = Window.height * 4
 x_step = find_step(Window.width)
 y_step = find_step(Window.height)
 config_file = path.abspath(path.join(path.dirname(__file__), 'configuration.yaml'))
+logo_font_path = path.abspath(path.join(path.dirname(__file__), 'fonts', 'freebsc.ttf'))
 
 screen_manager = ScreenManager(transition=NoTransition())
 
@@ -53,19 +53,6 @@ def update_rect(instance, value):
     instance.rect.pos = instance.pos
     instance.rect.size = instance.size
 
-
-# class Header(GridLayout):
-#     size_hint = None
-#
-#     def __init__(self):
-#         super(Header, self).__init__()
-#
-#         with self.canvas.before:
-#             Color(.28, .40, .28, .8)
-#             self.rect = Rectangle(size=self.size, pos=self.pos)
-#
-#         self.bind(pos=update_rect, size=update_rect)
-#         self.add_widget(Label(text='Question'))
 
 class MainScreen(Screen):
 
@@ -487,6 +474,7 @@ class NotificationScreen(Screen):
 
 class SignUp(Screen):
     user_name_text = ''
+    email_text = ''
     password_text = ''
     repeat_pass_text = ''
 
@@ -509,7 +497,12 @@ class SignUp(Screen):
         self.event = Clock.schedule_interval(self.update_canvas, EVENT_INTERVAL_RATE)
 
         container = RelativeLayout()
-        title = Label(text="Haven't joined our community yet?!", pos_hint={'center_x': 0.5, 'center_y': 0.9})
+        title = Label(
+            text="Community",
+            font_name=logo_font_path,
+            font_size=dp(42),
+            pos_hint={'center_x': 0.5, 'center_y': 0.85},
+        )
         container.add_widget(title)
 
         self.notification_label = Label(
@@ -521,17 +514,31 @@ class SignUp(Screen):
         )
         container.add_widget(self.notification_label)
 
-        self.user_name_input = TextInput(
+        user_name_input = TextInput(
             hint_text='User Name',
             hint_text_color=[1, 1, 1, 1],
             padding_x=[20, 0],
             size_hint=(None, None),
             size=(Window.width / 1.2, Window.height / 12),
-            pos_hint={'center_x': 0.5, 'center_y': 0.8},
+            pos_hint={'center_x': 0.5, 'center_y': 0.7},
             opacity=0.3
         )
-        self.user_name_input.bind(text=partial(self.update_input_text, 'user_name'))
-        container.add_widget(self.user_name_input)
+        user_name_input.padding_y = [user_name_input.size[1] / 3, 0]
+        user_name_input.bind(text=partial(self.update_input_text, 'user_name'))
+        container.add_widget(user_name_input)
+
+        email_input = TextInput(
+            hint_text='Email Address',
+            hint_text_color=[1, 1, 1, 1],
+            padding_x=[20, 0],
+            size_hint=(None, None),
+            size=(Window.width / 1.2, Window.height / 12),
+            pos_hint={'center_x': 0.5, 'center_y': 0.6},
+            opacity=0.3
+        )
+        email_input.padding_y = [email_input.size[1] / 3, 0]
+        email_input.bind(text=partial(self.update_input_text, 'email'))
+        container.add_widget(email_input)
 
         password_input = TextInput(
             hint_text='Password',
@@ -539,10 +546,11 @@ class SignUp(Screen):
             padding_x=[20, 0],
             size_hint=(None, None),
             size=(Window.width / 1.2, Window.height / 12),
-            pos_hint={'center_x': 0.5, 'center_y': 0.7},
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
             password=True,
             opacity=0.3
         )
+        password_input.padding_y = [password_input.size[1] / 3, 0]
         password_input.bind(text=partial(self.update_input_text, 'password'))
         container.add_widget(password_input)
 
@@ -552,10 +560,11 @@ class SignUp(Screen):
             padding_x=[20, 0],
             size_hint=(None, None),
             size=(Window.width / 1.2, Window.height / 12),
-            pos_hint={'center_x': 0.5, 'center_y': 0.6},
+            pos_hint={'center_x': 0.5, 'center_y': 0.4},
             password=True,
             opacity=0.3
         )
+        repeat_password_input.padding_y = [repeat_password_input.size[1] / 3, 0]
         repeat_password_input.bind(text=partial(self.update_input_text, 'repeat_password'))
         container.add_widget(repeat_password_input)
 
@@ -563,29 +572,24 @@ class SignUp(Screen):
             text='Register',
             size_hint=(None, None),
             size=(Window.width / 1.2, Window.height / 12),
-            pos_hint={'center_x': 0.5, 'center_y': 0.45},
+            pos_hint={'center_x': 0.5, 'center_y': 0.3},
             background_normal='',
-            background_color=(.28, .40, .28, 1),
-            opacity=0.8
+            background_color=(1, 1, 1, 0.3),
+            opacity=0.8,
+            color=(1, 1, 1, 1)
         )
         register_button.bind(on_press=self.register)
         container.add_widget(register_button)
 
-        login_label = Label(
-            text='Already a member?',
-            size_hint=(None, None),
-            size=(Window.width / 1.2, Window.height / 12),
-            pos_hint={'center_x': 0.5, 'center_y': 0.35},
-        )
-        container.add_widget(login_label)
         login_button = Button(
-            text='Login',
+            text='Already have an account? Sign In!',
             size_hint=(None, None),
-            size=(Window.width / 1.2, Window.height / 12),
+            size=(Window.width, Window.height / 10),
             pos_hint={'center_x': 0.5, 'center_y': 0.05},
             background_normal='',
-            background_color=(.28, .40, .28, 1),
-            opacity=0.8
+            background_color=(1, 1, 1, 0.3),
+            opacity=0.8,
+            color=(1, 1, 1, 1)
         )
         login_button.bind(on_press=partial(switch_to_screen, SignIn, 'sign_in'))
         container.add_widget(login_button)
@@ -603,14 +607,15 @@ class SignUp(Screen):
         self.move_canvas(x, y)
 
     def update_move_direction(self, x, y):
-        if x == -canvas_x_revert_point and y == 0:
+        if x == -canvas_x_revert_point and y == 0 and self.canvas_move_direction == 'to_up':
+            self.canvas_move_direction = 'to_right'
+        elif x == -canvas_x_revert_point and y == 0:
             self.canvas_move_direction = 'to_down'
         elif x == -canvas_x_revert_point and y == -canvas_y_revert_point:
-            self.canvas_move_direction = 'to_right'
-        elif x == 0 and y == -canvas_y_revert_point:
             self.canvas_move_direction = 'to_up'
         elif x == 0 and y == 0:
             self.canvas_move_direction = 'to_left'
+        self.move_canvas(x, y)
 
     def move_canvas(self, x, y):
         direction = self.canvas_move_direction
@@ -631,6 +636,8 @@ class SignUp(Screen):
             self.user_name_text = value
         elif referer == 'password':
             self.password_text = value
+        elif referer == 'email':
+            self.email_text = value
         else:
             self.repeat_pass_text = value
 

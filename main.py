@@ -22,7 +22,7 @@ from requests.exceptions import ConnectionError
 
 from drawer import NavigationDrawer
 from request_handler import *
-from helpers import normalize_tags, tell_time_ago, find_step
+from helpers import normalize_tags, tell_time_ago, find_step, Alert
 
 
 me = None
@@ -31,16 +31,20 @@ question_id = None
 tags = None
 EVENT_INTERVAL_RATE = 0.1
 
-canvas_x_revert_point = Window.width * 4
-canvas_y_revert_point = Window.height * 4
+texture_size = (3, 3)
+canvas_size = (Window.width * 10, Window.height * 10)
+canvas_x_revert_point = Window.width * 8
+canvas_y_revert_point = Window.height * 6
 x_step = find_step(Window.width)
 y_step = find_step(Window.height)
+
 config_file = path.abspath(path.join(path.dirname(__file__), 'configuration.yaml'))
-logo_font_path = path.abspath(path.join(path.dirname(__file__), 'fonts', 'freebsc.ttf'))
+logo_font_path = path.abspath(path.join(path.dirname(__file__), 'fonts', 'free_bsc.ttf'))
 
 screen_manager = ScreenManager(transition=NoTransition())
 
 
+# noinspection PyUnusedLocal
 def update_rect(instance, value):
     instance.rect.pos = instance.pos
     instance.rect.size = instance.size
@@ -168,12 +172,14 @@ class MainScreen(Screen):
         navigation_drawer.add_widget(box_container)
         Window.add_widget(navigation_drawer)
 
-    def select_question(self, *args):
+    @staticmethod
+    def select_question(*args):
         global question_id
         question_id = args[0]
         switch_to_screen(QuestionScreen, 'question')
 
-    def select_user(self, *args):
+    @staticmethod
+    def select_user(*args):
         global user_id
         user_id = args[0]
         switch_to_screen(UserScreen)
@@ -297,6 +303,7 @@ class NewQuestionScreen(Screen):
         elif referer == 'question':
             self.question_input_text = value
 
+    # noinspection PyUnusedLocal
     def post_question(self, *args):
         tags = normalize_tags(self.tags_input_text)
         resp = post_question(self.title_input_text, self.question_input_text, int(me['id']), tags=tags)
@@ -304,6 +311,7 @@ class NewQuestionScreen(Screen):
             screen_manager.switch_to(MainScreen())
         # TODO: Implement handling of possible exceptions
 
+    # noinspection PyUnusedLocal
     def on_tag_selection(self, *args):
         content = BoxLayout()
         if tags:
@@ -427,6 +435,7 @@ class QuestionScreen(Screen):
             navigation_drawer.add_widget(box_container)
             Window.add_widget(navigation_drawer)
 
+    # noinspection PyUnusedLocal
     def submit_answer(self, *args):
         resp = post_answer(self.answer_text, me['id'], question_id)
         if resp:
@@ -458,6 +467,7 @@ class NotificationScreen(Screen):
         root.add_widget(body)
         self.add_widget(root)
 
+    @staticmethod
     def select_notification(self, *args):
         global question
         question = args[0]
@@ -474,7 +484,7 @@ class SignUp(Screen):
         super(SignUp, self).__init__()
         root = BoxLayout(orientation='vertical')
 
-        self.texture = Texture.create(size=(3, 3), colorfmt="rgb")
+        self.texture = Texture.create(size=texture_size, colorfmt="rgb")
         pixels = bytes([int(v * 255) for v in (0.0, 0.0, 0.0)])
         buf = ''.join(pixels)
         self.texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
@@ -483,7 +493,7 @@ class SignUp(Screen):
         body = GridLayout(cols=1, spacing=2, size_hint=(1, 1))
         body.bind(minimum_height=body.setter('height'))
         with body.canvas.before:
-            self.canvas_size = (Window.width * 6, Window.height * 6)
+            self.canvas_size = canvas_size
             self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=self.texture)
         # body.bind(pos=update_rect, size=update_rect)
         self.event = Clock.schedule_interval(self.update_canvas, EVENT_INTERVAL_RATE)
@@ -507,7 +517,7 @@ class SignUp(Screen):
         container.add_widget(self.notification_label)
 
         user_name_input = TextInput(
-            hint_text='User Name',
+            hint_text='Username',
             hint_text_color=[1, 1, 1, 1],
             padding_x=[20, 0],
             size_hint=(None, None),
@@ -566,7 +576,7 @@ class SignUp(Screen):
             size=(Window.width / 1.2, Window.height / 12),
             pos_hint={'center_x': 0.5, 'center_y': 0.3},
             background_normal='',
-            background_color=(1, 1, 1, 0.3),
+            background_color=(1, 1, 1, 0.6),
             opacity=0.8,
             color=(1, 1, 1, 1)
         )
@@ -574,7 +584,7 @@ class SignUp(Screen):
         container.add_widget(register_button)
 
         login_button = Button(
-            text='Already have an account? Sign In!',
+            text='Already have an account? [b]Sign In![/b]', markup=True,
             size_hint=(None, None),
             size=(Window.width, Window.height / 10),
             pos_hint={'center_x': 0.5, 'center_y': 0.05},
@@ -636,10 +646,28 @@ class SignUp(Screen):
     def update_notif_text(self, *args):
         self.notification_label.text = '[ref=%s]%s[/ref]' % (args[0], args[0])
 
+    # noinspection PyUnusedLocal
     def register(self, *args):
-        if register(self.user_name_text, self.password_text)['OK']:
-            self.update_notif_text('Registration Complete! Tap Here to Login')
-            self.notification_label.bind(on_ref_press=partial(switch_to_screen, SignIn, 'sign_in'))
+        self.validate_registration_inputs()
+        if self.validation_message == '':
+            if register(self.user_name_text, self.password_text, self.email_text)['OK']:
+                self.update_notif_text('Registration Complete! Tap Here to Login')
+                self.notification_label.bind(on_ref_press=partial(switch_to_screen, SignIn, 'sign_in'))
+        else:
+            Alert('Hint', self.validation_message)
+
+    def validate_registration_inputs(self):
+        self.validation_message = ''
+        if self.user_name_text == '':
+            self.validation_message = 'Fill in the Username input!'
+        elif self.password_text == '':
+            self.validation_message = 'Fill in the Password input!'
+        elif self.repeat_pass_text == '':
+            self.validation_message = 'Fill in the Repeat Password input!'
+        elif self.email_text == '':
+            self.validation_message = 'Fill in the Email Address input!'
+        elif self.password_text != self.repeat_pass_text:
+            self.validation_message = 'Password and repeat password must be equal!'
 
 
 def switch_to_screen(*args):
@@ -715,6 +743,7 @@ class SignIn(Screen):
         root.add_widget(body)
         self.add_widget(root)
 
+    # noinspection PyUnusedLocal
     def sign_in(self, *args):
         resp = login(self.user_name_text, self.password_text)
         if resp:
@@ -759,8 +788,6 @@ class UserScreen(Screen):
             body.bind(pos=update_rect, size=update_rect)
 
             container = RelativeLayout()
-
-
 
             body.add_widget(container)
 
@@ -833,14 +860,14 @@ class SidePanel(Screen):
             # a.filters = ['*.png', '*.jpg', '*.jpeg']
             # a.bind(on_submit=self.choose_file)
             # close = Button(size_hint=(None, None), size=(50, 50))
-            # close.bind(on_press=partial(self.close_filechooser, a))
+            # close.bind(on_press=partial(self.close_file_chooser, a))
             # # self.add_widget(a)
             self.add_widget(body)
 
     def choose_file(self, *args):
         post_image(me['id'], args[1][0])
 
-    def close_filechooser(self, *args):
+    def close_file_chooser(self, *args):
         self.remove_widget(args[0])
 
 

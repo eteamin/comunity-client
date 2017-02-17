@@ -480,7 +480,8 @@ class SignUp(Screen):
     password_text = ''
     repeat_pass_text = ''
 
-    def __init__(self):
+    def __init__(self, name):
+        self.name = name
         super(SignUp, self).__init__()
         root = BoxLayout(orientation='vertical')
 
@@ -495,7 +496,6 @@ class SignUp(Screen):
         with body.canvas.before:
             self.canvas_size = canvas_size
             self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=self.texture)
-        # body.bind(pos=update_rect, size=update_rect)
         self.event = Clock.schedule_interval(self.update_canvas, EVENT_INTERVAL_RATE)
 
         container = RelativeLayout()
@@ -518,13 +518,13 @@ class SignUp(Screen):
 
         user_name_input = TextInput(
             hint_text='Username',
-            hint_text_color=[1, 1, 1, 1],
-            color=[1, 1, 1, 1],
+            hint_text_color=(1, 1, 1, 1),
+            foreground_color=(1, 1, 1, 1),
             padding_x=[20, 0],
             size_hint=(None, None),
             size=(Window.width / 1.2, Window.height / 12),
             pos_hint={'center_x': 0.5, 'center_y': 0.7},
-            opacity=0.3
+            opacity=0.4
         )
         user_name_input.padding_y = [user_name_input.size[1] / 3, 0]
         user_name_input.bind(text=partial(self.update_input_text, 'user_name'))
@@ -537,7 +537,7 @@ class SignUp(Screen):
             size_hint=(None, None),
             size=(Window.width / 1.2, Window.height / 12),
             pos_hint={'center_x': 0.5, 'center_y': 0.6},
-            opacity=0.3
+            opacity=0.4
         )
         email_input.padding_y = [email_input.size[1] / 3, 0]
         email_input.bind(text=partial(self.update_input_text, 'email'))
@@ -551,7 +551,7 @@ class SignUp(Screen):
             size=(Window.width / 1.2, Window.height / 12),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
             password=True,
-            opacity=0.3
+            opacity=0.4
         )
         password_input.padding_y = [password_input.size[1] / 3, 0]
         password_input.bind(text=partial(self.update_input_text, 'password'))
@@ -565,7 +565,7 @@ class SignUp(Screen):
             size=(Window.width / 1.2, Window.height / 12),
             pos_hint={'center_x': 0.5, 'center_y': 0.4},
             password=True,
-            opacity=0.3
+            opacity=0.4
         )
         self.repeat_password_input.bind(focus=self.on_repeat_password_focus)
         self.repeat_password_input.padding_y = [self.repeat_password_input.size[1] / 3, 0]
@@ -601,7 +601,6 @@ class SignUp(Screen):
         body.add_widget(container)
         root.add_widget(body)
         self.add_widget(root)
-        # Window.bind(on_keyboard=self.on_key_down)
         self.has_moved = False
 
     # noinspection PyUnusedLocal
@@ -610,7 +609,6 @@ class SignUp(Screen):
         y = self.rect.pos[1]
 
         self.update_move_direction(x, y)
-        self.move_canvas(x, y)
 
     def update_move_direction(self, x, y):
         if x == -canvas_x_revert_point and y == 0 and self.canvas_move_direction == 'to_up':
@@ -654,9 +652,8 @@ class SignUp(Screen):
     def register(self, *args):
         self.validate_registration_inputs()
         if self.validation_message == '':
-            if register(self.user_name_text, self.password_text, self.email_text)['OK']:
-                self.update_notif_text('Registration Complete! Tap Here to Login')
-                self.notification_label.bind(on_ref_press=partial(switch_to_screen, SignIn, 'sign_in'))
+            if register(self.user_name_text, self.password_text, self.email_text)['ok']:
+                switch_to_screen(SignIn, 'sign_in')
         else:
             Alert('Hint', self.validation_message)
 
@@ -675,10 +672,10 @@ class SignUp(Screen):
 
     def on_repeat_password_focus(self, instance, value):
         if value and self.has_moved is False:
-            self.pos = self.pos[0], self.pos[1] + 25
+            self.pos = self.pos[0], self.pos[1] + Window.height / 5
             self.has_moved = True
         elif not value and self.has_moved is True:
-            self.pos = self.pos[0], self.pos[1] - 25
+            self.pos = self.pos[0], self.pos[1] - Window.height / 5
             self.has_moved = False
 
     # def on_key_down(self, *args):
@@ -687,39 +684,27 @@ class SignUp(Screen):
     #         self.pos = self.pos[0], self.pos[1] - 25
 
 
-def switch_to_screen(*args):
-    screen_obj = args[0]
-    screen_name = args[1]
-    if issubclass(screen_obj, Screen):
-        screen_manager.add_widget(screen_obj(name=screen_name)) if screen_name not in screen_manager.screen_names else None
-        screen_manager.current = screen_name
-    print screen_manager.screen_names
-
-
 class SignIn(Screen):
     user_name_text = ''
     password_text = ''
 
     def __init__(self, name):
-        super(SignIn, self).__init__()
         self.name = name
+        super(SignIn, self).__init__()
         root = BoxLayout(orientation='vertical')
-        header = GridLayout(cols=1, size_hint=(1, .1))
 
-        with header.canvas.before:
-            Color(.28, .40, .28, .8)
-            header.rect = Rectangle(size=header.size, pos=header.pos)
+        self.texture = Texture.create(size=texture_size, colorfmt="rgb")
+        pixels = bytes([int(v * 255) for v in (0.0, 0.0, 0.0)])
+        buf = ''.join(pixels)
+        self.texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
+        self.canvas_move_direction = 'to_left'
 
-        header.bind(pos=update_rect, size=update_rect)
-        header.add_widget(Label(text='Question'))
-
-        body = GridLayout(cols=1, spacing=2, size_hint=(1, .9))
+        body = GridLayout(cols=1, spacing=2, size_hint=(1, 1))
         body.bind(minimum_height=body.setter('height'))
-
         with body.canvas.before:
-            Color(.65, .72, .66, .8)
-            body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=body.pos)
-        body.bind(pos=update_rect, size=update_rect)
+            self.canvas_size = canvas_size
+            self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=self.texture)
+        self.event = Clock.schedule_interval(self.update_canvas, EVENT_INTERVAL_RATE)
 
         container = RelativeLayout()
         title = Label(text='Login to your account', pos_hint={'center_x': 0.5, 'center_y': 0.9})
@@ -756,7 +741,6 @@ class SignIn(Screen):
         container.add_widget(sign_in)
 
         body.add_widget(container)
-        root.add_widget(header)
         root.add_widget(body)
         self.add_widget(root)
 
@@ -888,6 +872,15 @@ class SidePanel(Screen):
         self.remove_widget(args[0])
 
 
+def switch_to_screen(*args):
+    screen_obj = args[0]
+    screen_name = args[1]
+    if issubclass(screen_obj, Screen):
+        screen_manager.add_widget(screen_obj(name=screen_name)) if screen_name not in screen_manager.screen_names else None
+        screen_manager.current = screen_name
+    print screen_manager.screen_names
+
+
 class CommunityApp(App):
     def on_start(self):
         global me
@@ -898,7 +891,7 @@ class CommunityApp(App):
                 if me and 'id' in me:
                     screen_manager.add_widget(MainScreen(name='main'))
             else:
-                screen_manager.add_widget(SignUp())
+                screen_manager.add_widget(SignUp(name='sign_up'))
 
     def on_pause(self):
         return True

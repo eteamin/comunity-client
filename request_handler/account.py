@@ -13,11 +13,11 @@ def login(user_name, password):
 
 
 def register(user_name, password, email_address):
-    data = {
+    payload = {
         'username': user_name,
         'password': password,
         'email_address': email_address,
         'bio': None
     }
-    resp = post('%s/users/register' % server_url, data=data)
+    resp = post('%s/users/register' % server_url, json=payload, headers=make_headers())
     return resp.json() if resp.status_code == 200 else None

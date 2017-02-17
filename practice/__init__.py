@@ -15,12 +15,12 @@ class Text(TextInput):
         self.moved_up = False
 
     def on_touch_down(self, touch):
+        super(Text, self).on_touch_down(touch)
         if self.collide_point(* touch.pos):
             print "text is touched"
             if self.moved_up is False:
-                self.pos = [self.pos[0], self.pos[1] + 1]
+                self.pos = [self.pos[0], self.pos[1] + 350]
                 self.moved_up = True
-        super(Text, self).on_touch_down(touch)
         print self.focus
 
 

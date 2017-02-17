@@ -567,9 +567,9 @@ class SignUp(Screen):
             password=True,
             opacity=0.3
         )
+        self.repeat_password_input.bind(focus=self.on_repeat_password_focus)
         self.repeat_password_input.padding_y = [self.repeat_password_input.size[1] / 3, 0]
         self.repeat_password_input.bind(text=partial(self.update_input_text, 'repeat_password'))
-        self.repeat_password_input.keyboard_on_key_down = self.on_key_down
         container.add_widget(self.repeat_password_input)
 
         register_button = Button(
@@ -601,7 +601,7 @@ class SignUp(Screen):
         body.add_widget(container)
         root.add_widget(body)
         self.add_widget(root)
-        Window.bind(on_keyboard=self.on_key_down)
+        # Window.bind(on_keyboard=self.on_key_down)
         self.has_moved = False
 
     # noinspection PyUnusedLocal
@@ -673,20 +673,18 @@ class SignUp(Screen):
         elif self.password_text != self.repeat_pass_text:
             self.validation_message = 'Password and repeat password must be equal!'
 
-    def on_touch_down(self, touch):
-        if self.repeat_password_input.collide_point(*touch.pos) and self.has_moved is False:
-            print 'yeah'
+    def on_repeat_password_focus(self, instance, value):
+        if value and self.has_moved is False:
             self.pos = self.pos[0], self.pos[1] + 25
             self.has_moved = True
-        elif self.repeat_password_input.focus is False and self.has_moved is True:
+        elif not value and self.has_moved is True:
             self.pos = self.pos[0], self.pos[1] - 25
             self.has_moved = False
-        super(SignUp, self).on_touch_down(touch)
 
-    def on_key_down(self, *args):
-        print str(args[1])
-        self.repeat_password_input.text += str(args[1])
-        return True
+    # def on_key_down(self, *args):
+    #     key_code = args[1]
+    #     if key_code == 21 and self.has_moved:  # BackButton in android
+    #         self.pos = self.pos[0], self.pos[1] - 25
 
 
 def switch_to_screen(*args):

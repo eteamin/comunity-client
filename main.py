@@ -519,6 +519,7 @@ class SignUp(Screen):
         user_name_input = TextInput(
             hint_text='Username',
             hint_text_color=[1, 1, 1, 1],
+            color=[1, 1, 1, 1],
             padding_x=[20, 0],
             size_hint=(None, None),
             size=(Window.width / 1.2, Window.height / 12),
@@ -556,7 +557,7 @@ class SignUp(Screen):
         password_input.bind(text=partial(self.update_input_text, 'password'))
         container.add_widget(password_input)
 
-        repeat_password_input = TextInput(
+        self.repeat_password_input = TextInput(
             hint_text='Repeat Password',
             hint_text_color=[1, 1, 1, 1],
             padding_x=[20, 0],
@@ -566,9 +567,10 @@ class SignUp(Screen):
             password=True,
             opacity=0.3
         )
-        repeat_password_input.padding_y = [repeat_password_input.size[1] / 3, 0]
-        repeat_password_input.bind(text=partial(self.update_input_text, 'repeat_password'))
-        container.add_widget(repeat_password_input)
+        self.repeat_password_input.padding_y = [self.repeat_password_input.size[1] / 3, 0]
+        self.repeat_password_input.bind(text=partial(self.update_input_text, 'repeat_password'))
+        self.repeat_password_input.keyboard_on_key_down = self.on_key_down
+        container.add_widget(self.repeat_password_input)
 
         register_button = Button(
             text='Register',
@@ -599,6 +601,8 @@ class SignUp(Screen):
         body.add_widget(container)
         root.add_widget(body)
         self.add_widget(root)
+        Window.bind(on_keyboard=self.on_key_down)
+        self.has_moved = False
 
     # noinspection PyUnusedLocal
     def update_canvas(self, dt):
@@ -668,6 +672,21 @@ class SignUp(Screen):
             self.validation_message = 'Fill in the Email Address input!'
         elif self.password_text != self.repeat_pass_text:
             self.validation_message = 'Password and repeat password must be equal!'
+
+    def on_touch_down(self, touch):
+        if self.repeat_password_input.collide_point(*touch.pos) and self.has_moved is False:
+            print 'yeah'
+            self.pos = self.pos[0], self.pos[1] + 25
+            self.has_moved = True
+        elif self.repeat_password_input.focus is False and self.has_moved is True:
+            self.pos = self.pos[0], self.pos[1] - 25
+            self.has_moved = False
+        super(SignUp, self).on_touch_down(touch)
+
+    def on_key_down(self, *args):
+        print str(args[1])
+        self.repeat_password_input.text += str(args[1])
+        return True
 
 
 def switch_to_screen(*args):

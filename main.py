@@ -6,30 +6,33 @@ from kivy.app import App
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, Line
 from kivy.metrics import dp
-from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics.texture import Texture
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import AsyncImage
 from kivy.uix.popup import Popup
 from kivy.uix.button import Button
 from kivy.uix.label import Label
-from kivy.clock import Clock
 from kivy.uix.textinput import TextInput
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.progressbar import ProgressBar
 from kivy.uix.screenmanager import ScreenManager, Screen, NoTransition
+from kivy.clock import Clock
 from requests.exceptions import ConnectionError
 
 from drawer import NavigationDrawer
 from request_handler import *
 from helpers import normalize_tags, tell_time_ago, find_step, Alert
 
+resp = None
 
 me = None
 user_id = None
 question_id = None
 tags = None
 EVENT_INTERVAL_RATE = 0.1
+progress_bar = ProgressBar(max=100)
 
 texture_size = (3, 3)
 canvas_size = (Window.width * 10, Window.height * 10)
@@ -496,8 +499,8 @@ class SignUp(Screen):
         with body.canvas.before:
             self.canvas_size = canvas_size
             self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=self.texture)
-        self.event = Clock.schedule_interval(partial(update_canvas, self.rect), EVENT_INTERVAL_RATE)
-
+        self.canvas_event = Clock.schedule_interval(partial(update_canvas, self.rect), EVENT_INTERVAL_RATE)
+        Clock.schedule_once(self.insert_progress_bar)
         container = RelativeLayout()
         title = Label(
             text="Community",
@@ -582,7 +585,8 @@ class SignUp(Screen):
             opacity=0.8,
             color=(1, 1, 1, 1)
         )
-        register_button.bind(on_press=self.register)
+        register_trigger = Clock.create_trigger(self.register)
+        register_button.bind(on_press=partial(register_trigger))
         container.add_widget(register_button)
 
         login_button = Button(
@@ -618,12 +622,32 @@ class SignUp(Screen):
 
     # noinspection PyUnusedLocal
     def register(self, *args):
+        self._register()
+        self.registration_event = Clock.schedule_interval(self.async_await_resp, EVENT_INTERVAL_RATE)
+
+    # noinspection PyUnusedLocal
+    def _register(self, *args):
+        # print 'doing registration'
         self.validate_registration_inputs()
         if self.validation_message == '':
-            if register(self.user_name_text, self.password_text, self.email_text)['ok']:
-                switch_to_screen(SignIn, 'sign_in')
+            register(self.user_name_text, self.password_text, self.email_text)
         else:
             Alert('Hint', self.validation_message)
+
+    # noinspection PyUnusedLocal
+    def insert_progress_bar(self, *args):
+        self.add_widget(progress_bar)
+        progress_bar.pos_hint = {'center_x': 0.5, 'center_y': 0.996}
+        progress_bar.value = 0
+
+    # noinspection PyUnusedLocal
+    def async_await_resp(self, *args):
+        print resp
+        if not resp:
+            progress_bar.value += 5
+        else:
+            Clock.unschedule(self.registration_event)
+            switch_to_screen(SignIn, 'sign_in')
 
     def validate_registration_inputs(self):
         self.validation_message = ''
@@ -908,6 +932,11 @@ def _move_canvas(rect, x, y):
         rect.pos = x, y + y_step
     elif direction == 'to_down':
         rect.pos = x, y - y_step
+
+
+def retrieve_resp(_resp):
+    global resp
+    resp = _resp
 
 
 class CommunityApp(App):

@@ -1,6 +1,7 @@
 from functools import partial
 from os import path
 import json
+from Queue import Queue, Empty
 
 from kivy.app import App
 from kivy.core.window import Window
@@ -25,7 +26,7 @@ from drawer import NavigationDrawer
 from request_handler import *
 from helpers import normalize_tags, tell_time_ago, find_step, Alert
 
-resp = None
+resps = Queue()
 
 me = None
 user_id = None
@@ -630,7 +631,7 @@ class SignUp(Screen):
         # print 'doing registration'
         self.validate_registration_inputs()
         if self.validation_message == '':
-            register(self.user_name_text, self.password_text, self.email_text)
+            register(resps, self.user_name_text, self.password_text, self.email_text)
         else:
             Alert('Hint', self.validation_message)
 
@@ -642,12 +643,12 @@ class SignUp(Screen):
 
     # noinspection PyUnusedLocal
     def async_await_resp(self, *args):
-        print resp
-        if not resp:
-            progress_bar.value += 5
-        else:
+        try:
+            resp = resps.get(timeout=EVENT_INTERVAL_RATE / 2)
             Clock.unschedule(self.registration_event)
             switch_to_screen(SignIn, 'sign_in')
+        except Empty as QueueEmpty:
+            progress_bar.value += 5
 
     def validate_registration_inputs(self):
         self.validation_message = ''
@@ -932,11 +933,6 @@ def _move_canvas(rect, x, y):
         rect.pos = x, y + y_step
     elif direction == 'to_down':
         rect.pos = x, y - y_step
-
-
-def retrieve_resp(_resp):
-    global resp
-    resp = _resp
 
 
 class CommunityApp(App):

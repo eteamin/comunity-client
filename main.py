@@ -37,6 +37,7 @@ canvas_x_revert_point = Window.width * 8
 canvas_y_revert_point = Window.height * 6
 x_step = find_step(Window.width)
 y_step = find_step(Window.height)
+canvas_move_direction = 'to_left'
 
 config_file = path.abspath(path.join(path.dirname(__file__), 'configuration.yaml'))
 logo_font_path = path.abspath(path.join(path.dirname(__file__), 'fonts', 'free_bsc.ttf'))
@@ -489,14 +490,13 @@ class SignUp(Screen):
         pixels = bytes([int(v * 255) for v in (0.0, 0.0, 0.0)])
         buf = ''.join(pixels)
         self.texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
-        self.canvas_move_direction = 'to_left'
 
         body = GridLayout(cols=1, spacing=2, size_hint=(1, 1))
         body.bind(minimum_height=body.setter('height'))
         with body.canvas.before:
             self.canvas_size = canvas_size
             self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=self.texture)
-        self.event = Clock.schedule_interval(self.update_canvas, EVENT_INTERVAL_RATE)
+        self.event = Clock.schedule_interval(partial(update_canvas, self.rect), EVENT_INTERVAL_RATE)
 
         container = RelativeLayout()
         title = Label(
@@ -603,35 +603,6 @@ class SignUp(Screen):
         self.add_widget(root)
         self.has_moved = False
 
-    # noinspection PyUnusedLocal
-    def update_canvas(self, dt):
-        x = self.rect.pos[0]
-        y = self.rect.pos[1]
-
-        self.update_move_direction(x, y)
-
-    def update_move_direction(self, x, y):
-        if x == -canvas_x_revert_point and y == 0 and self.canvas_move_direction == 'to_up':
-            self.canvas_move_direction = 'to_right'
-        elif x == -canvas_x_revert_point and y == 0:
-            self.canvas_move_direction = 'to_down'
-        elif x == -canvas_x_revert_point and y == -canvas_y_revert_point:
-            self.canvas_move_direction = 'to_up'
-        elif x == 0 and y == 0:
-            self.canvas_move_direction = 'to_left'
-        self.move_canvas(x, y)
-
-    def move_canvas(self, x, y):
-        direction = self.canvas_move_direction
-        if direction == 'to_left':
-            self.rect.pos = x - x_step, y
-        elif direction == 'to_right':
-            self.rect.pos = x + x_step, y
-        elif direction == 'to_up':
-            self.rect.pos = x, y + y_step
-        elif direction == 'to_down':
-            self.rect.pos = x, y - y_step
-
     def update_input_text(self, *args):
         referer = args[0]
         value = args[2]
@@ -644,9 +615,6 @@ class SignUp(Screen):
             self.email_text = value
         else:
             self.repeat_pass_text = value
-
-    def update_notif_text(self, *args):
-        self.notification_label.text = '[ref=%s]%s[/ref]' % (args[0], args[0])
 
     # noinspection PyUnusedLocal
     def register(self, *args):
@@ -704,41 +672,70 @@ class SignIn(Screen):
         with body.canvas.before:
             self.canvas_size = canvas_size
             self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=self.texture)
-        self.event = Clock.schedule_interval(self.update_canvas, EVENT_INTERVAL_RATE)
+            self.event = Clock.schedule_interval(partial(update_canvas, self.rect), EVENT_INTERVAL_RATE)
 
         container = RelativeLayout()
-        title = Label(text='Login to your account', pos_hint={'center_x': 0.5, 'center_y': 0.9})
+        title = Label(
+            text="Community",
+            font_name=logo_font_path,
+            font_size=dp(42),
+            pos_hint={'center_x': 0.5, 'center_y': 0.85},
+        )
         container.add_widget(title)
 
         user_name_input = TextInput(
-            hint_text='User Name',
+            hint_text='Username',
+            hint_text_color=(1, 1, 1, 1),
+            foreground_color=(1, 1, 1, 1),
+            padding_x=[20, 0],
             size_hint=(None, None),
-            size=(Window.width / 4, Window.height / 20),
-            pos_hint={'center_x': 0.5, 'center_y': 0.7}
+            size=(Window.width / 1.2, Window.height / 12),
+            pos_hint={'center_x': 0.5, 'center_y': 0.7},
+            opacity=0.4
         )
+        user_name_input.padding_y = [user_name_input.size[1] / 3, 0]
         user_name_input.bind(text=partial(self.update_input_text, 'user_name'))
         container.add_widget(user_name_input)
 
         password_input = TextInput(
             hint_text='Password',
+            hint_text_color=[1, 1, 1, 1],
+            padding_x=[20, 0],
             size_hint=(None, None),
-            size=(Window.width / 4, Window.height / 20),
+            size=(Window.width / 1.2, Window.height / 12),
             pos_hint={'center_x': 0.5, 'center_y': 0.6},
-            password=True
+            password=True,
+            opacity=0.4
         )
+        password_input.padding_y = [password_input.size[1] / 3, 0]
         password_input.bind(text=partial(self.update_input_text, 'password'))
         container.add_widget(password_input)
 
-        sign_in = Button(
+        sign_in_button = Button(
             text='Login',
             size_hint=(None, None),
-            size=(Window.width / 4, Window.height / 20),
+            size=(Window.width / 1.2, Window.height / 12),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
             background_normal='',
-            background_color=(.28, .40, .28, 1)
+            background_color=(1, 1, 1, 0.6),
+            opacity=0.8,
+            color=(1, 1, 1, 1)
         )
-        sign_in.bind(on_press=self.sign_in)
-        container.add_widget(sign_in)
+        sign_in_button.bind(on_press=self.sign_in)
+        container.add_widget(sign_in_button)
+
+        register_button = Button(
+            text="Don't have an account yet? [b]Sign Up![/b]", markup=True,
+            size_hint=(None, None),
+            size=(Window.width, Window.height / 10),
+            pos_hint={'center_x': 0.5, 'center_y': 0.05},
+            background_normal='',
+            background_color=(1, 1, 1, 0.3),
+            opacity=0.8,
+            color=(1, 1, 1, 1)
+        )
+        register_button.bind(on_press=partial(switch_to_screen, SignUp, 'sign_up'))
+        container.add_widget(register_button)
 
         body.add_widget(container)
         root.add_widget(body)
@@ -879,6 +876,38 @@ def switch_to_screen(*args):
         screen_manager.add_widget(screen_obj(name=screen_name)) if screen_name not in screen_manager.screen_names else None
         screen_manager.current = screen_name
     print screen_manager.screen_names
+
+
+# noinspection PyUnusedLocal
+def update_canvas(rect, dt):
+    x = rect.pos[0]
+    y = rect.pos[1]
+    _update_move_direction(rect, x, y)
+
+
+def _update_move_direction(rect, x, y):
+    global canvas_move_direction
+    if x == -canvas_x_revert_point and y == 0 and canvas_move_direction == 'to_up':
+        canvas_move_direction = 'to_right'
+    elif x == -canvas_x_revert_point and y == 0:
+        canvas_move_direction = 'to_down'
+    elif x == -canvas_x_revert_point and y == -canvas_y_revert_point:
+        canvas_move_direction = 'to_up'
+    elif x == 0 and y == 0:
+        canvas_move_direction = 'to_left'
+    _move_canvas(rect, x, y)
+
+
+def _move_canvas(rect, x, y):
+    direction = canvas_move_direction
+    if direction == 'to_left':
+        rect.pos = x - x_step, y
+    elif direction == 'to_right':
+        rect.pos = x + x_step, y
+    elif direction == 'to_up':
+        rect.pos = x, y + y_step
+    elif direction == 'to_down':
+        rect.pos = x, y - y_step
 
 
 class CommunityApp(App):

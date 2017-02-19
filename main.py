@@ -43,10 +43,11 @@ x_step = find_step(Window.width)
 y_step = find_step(Window.height)
 canvas_move_direction = 'to_left'
 
-config_file = path.abspath(path.join(path.dirname(__file__), 'configuration.yaml'))
+config_file = path.abspath(path.join(path.dirname(__file__), 'configuration.json'))
 logo_font_path = path.abspath(path.join(path.dirname(__file__), 'fonts', 'free_bsc.ttf'))
 
 screen_manager = ScreenManager(transition=NoTransition())
+color = (0.9, 0.9, 0.9, 0.5)
 
 
 # noinspection PyUnusedLocal
@@ -487,6 +488,7 @@ class SignUp(Screen):
 
     def __init__(self, name):
         self.name = name
+        self.color = color
         super(SignUp, self).__init__()
         root = BoxLayout(orientation='vertical')
 
@@ -610,6 +612,7 @@ class SignUp(Screen):
         root.add_widget(body)
         self.add_widget(root)
         self.has_moved = False
+        Window.clearcolor = (.9, .9, .9, 1)
 
     def update_input_text(self, *args):
         referer = args[0]
@@ -657,6 +660,7 @@ class SignUp(Screen):
         Clock.unschedule(self.registration_event)
         self.remove_widget(progress_bar)
         self.registration_scheduled = False
+        progress_bar.value = 0
 
     def validate_registration_inputs(self):
         self.validation_message = ''
@@ -792,6 +796,7 @@ class SignIn(Screen):
                 Alert('Ops!', resp['detail'])
             else:
                 # Store login info to configuration.yaml
+                write_config(resp)
                 switch_to_screen(self, MainScreen, 'main')
         except Empty as QueueEmpty:
             progress_bar.value += 2
@@ -800,6 +805,7 @@ class SignIn(Screen):
         Clock.unschedule(self.sign_in_event)
         self.remove_widget(progress_bar)
         self.sing_in_scheduled = False
+        progress_bar.value = 0
 
     def validate_login_inputs(self):
         self.validation_message = ''
@@ -974,17 +980,27 @@ def insert_progress_bar(widget, *args):
     progress_bar.value = 0
 
 
+def write_config(c):
+    with open(config_file, 'w') as stream:
+        data = json.dumps(c)
+        stream.write(data)
+
+
+def read_config():
+    with open(config_file, 'r') as stream:
+        return stream.read()
+
+
 class CommunityApp(App):
     def on_start(self):
         global me
-        with open(config_file, 'r') as stream:
-            user_info = stream.read()
-            if user_info:
-                me = json.loads(user_info)
-                if me and 'id' in me:
-                    screen_manager.add_widget(MainScreen(name='main'))
-            else:
-                screen_manager.add_widget(SignUp(name='sign_up'))
+        user_info = read_config()
+        if user_info:
+            me = json.loads(user_info)
+            if me and 'id' in me:
+                screen_manager.add_widget(MainScreen(name='main'))
+        else:
+            screen_manager.add_widget(SignUp(name='sign_up'))
 
     def on_pause(self):
         return True

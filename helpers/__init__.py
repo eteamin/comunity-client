@@ -1,36 +1,22 @@
-from kivy.uix.anchorlayout import AnchorLayout
-from kivy.uix.popup import Popup
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.core.window import Window
+import re
 
 from normalize import normalize_tags
 from timedelta import tell_time_ago
+from alert import Alert
 
 
 def find_step(size):
     return [i for i in range(20, 30) if size % i == 0][0]
 
 
-class Alert(Popup):
+def valid_email(email):
+    pattern = '[^@]+@[^@]+\.[^@]+'
+    return re.match(pattern, email)
 
-    def __init__(self, title, text):
-        super(Alert, self).__init__()
-        content = AnchorLayout(anchor_x='center', anchor_y='bottom')
-        content.add_widget(
-            Label(text=text, halign='left', valign='top')
-        )
-        ok_button = Button(text='Ok', size_hint=(None, None), size=(Window.width / 3, Window.height / 15))
-        content.add_widget(ok_button)
 
-        popup = Popup(
-            title=title,
-            content=content,
-            size_hint=(None, None),
-            size=(Window.width / 1.1, Window.height / 3),
-            opacity=0.8,
-            auto_dismiss=True,
-        )
-        ok_button.bind(on_press=popup.dismiss)
+def valid_username(u):
+    return len(u) > 3 and not u.startswith('_') and not u.startswith('.') and not u.endswith('_') and not u.endswith('.')
 
-        popup.open()
+
+def valid_password(p, rp):
+    return len(p) >= 8 and p == rp

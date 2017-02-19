@@ -24,7 +24,7 @@ from requests.exceptions import ConnectionError
 
 from drawer import NavigationDrawer
 from request_handler import *
-from helpers import normalize_tags, tell_time_ago, find_step, Alert
+from helpers import normalize_tags, tell_time_ago, find_step, Alert, valid_email, valid_password, valid_username
 
 resps = Queue()
 
@@ -501,7 +501,6 @@ class SignUp(Screen):
             self.canvas_size = canvas_size
             self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=self.texture)
         self.canvas_event = Clock.schedule_interval(partial(update_canvas, self.rect), EVENT_INTERVAL_RATE)
-        Clock.schedule_once(self.insert_progress_bar)
         container = RelativeLayout()
         title = Label(
             text="Community",
@@ -537,6 +536,7 @@ class SignUp(Screen):
         email_input = TextInput(
             hint_text='Email Address',
             hint_text_color=[1, 1, 1, 1],
+            foreground_color=(1, 1, 1, 1),
             padding_x=[20, 0],
             size_hint=(None, None),
             size=(Window.width / 1.2, Window.height / 12),
@@ -550,6 +550,7 @@ class SignUp(Screen):
         password_input = TextInput(
             hint_text='Password',
             hint_text_color=[1, 1, 1, 1],
+            foreground_color=(1, 1, 1, 1),
             padding_x=[20, 0],
             size_hint=(None, None),
             size=(Window.width / 1.2, Window.height / 12),
@@ -564,6 +565,7 @@ class SignUp(Screen):
         self.repeat_password_input = TextInput(
             hint_text='Repeat Password',
             hint_text_color=[1, 1, 1, 1],
+            foreground_color=(1, 1, 1, 1),
             padding_x=[20, 0],
             size_hint=(None, None),
             size=(Window.width / 1.2, Window.height / 12),
@@ -589,6 +591,7 @@ class SignUp(Screen):
         register_trigger = Clock.create_trigger(self.register)
         register_button.bind(on_press=partial(register_trigger))
         container.add_widget(register_button)
+        self.registration_scheduled = False
 
         login_button = Button(
             text='Already have an account? [b]Sign In![/b]', markup=True,
@@ -600,7 +603,7 @@ class SignUp(Screen):
             opacity=0.8,
             color=(1, 1, 1, 1)
         )
-        login_button.bind(on_press=partial(switch_to_screen, SignIn, 'sign_in'))
+        login_button.bind(on_press=partial(switch_to_screen, self, SignIn, 'sign_in'))
         container.add_widget(login_button)
 
         body.add_widget(container)
@@ -623,45 +626,46 @@ class SignUp(Screen):
 
     # noinspection PyUnusedLocal
     def register(self, *args):
-        self._register()
-        self.registration_event = Clock.schedule_interval(self.async_await_resp, EVENT_INTERVAL_RATE)
+        if not self.registration_scheduled:
+            if self._register():
+                self.registration_scheduled = True
+                Clock.schedule_once(partial(insert_progress_bar, self)) if progress_bar not in self.children else None
+                self.registration_event = Clock.schedule_interval(self.async_await_resp, EVENT_INTERVAL_RATE)
 
     # noinspection PyUnusedLocal
     def _register(self, *args):
-        # print 'doing registration'
         self.validate_registration_inputs()
         if self.validation_message == '':
             register(resps, self.user_name_text, self.password_text, self.email_text)
+            return True
         else:
             Alert('Hint', self.validation_message)
-
-    # noinspection PyUnusedLocal
-    def insert_progress_bar(self, *args):
-        self.add_widget(progress_bar)
-        progress_bar.pos_hint = {'center_x': 0.5, 'center_y': 0.996}
-        progress_bar.value = 0
 
     # noinspection PyUnusedLocal
     def async_await_resp(self, *args):
         try:
             resp = resps.get(timeout=EVENT_INTERVAL_RATE / 2)
-            Clock.unschedule(self.registration_event)
-            switch_to_screen(SignIn, 'sign_in')
+            self.reset()
+            if 'detail' in resp:  # Means an error occurred
+                Alert('Ops!', resp['detail'])
+            else:
+                switch_to_screen(self, SignIn, 'sign_in')
         except Empty as QueueEmpty:
-            progress_bar.value += 5
+            progress_bar.value += 2
+
+    def reset(self):
+        Clock.unschedule(self.registration_event)
+        self.remove_widget(progress_bar)
+        self.registration_scheduled = False
 
     def validate_registration_inputs(self):
         self.validation_message = ''
-        if self.user_name_text == '':
-            self.validation_message = 'Fill in the Username input!'
-        elif self.password_text == '':
-            self.validation_message = 'Fill in the Password input!'
-        elif self.repeat_pass_text == '':
-            self.validation_message = 'Fill in the Repeat Password input!'
-        elif self.email_text == '':
-            self.validation_message = 'Fill in the Email Address input!'
-        elif self.password_text != self.repeat_pass_text:
-            self.validation_message = 'Password and repeat password must be equal!'
+        if not valid_username(self.user_name_text):
+            self.validation_message = 'Invalid Username!'
+        elif not valid_password(self.password_text, self.repeat_pass_text):
+            self.validation_message = 'Password must be at least 8 characters!'
+        elif not valid_email(self.email_text):
+            self.validation_message = 'Invalid Email!'
 
     def on_repeat_password_focus(self, instance, value):
         if value and self.has_moved is False:
@@ -670,11 +674,6 @@ class SignUp(Screen):
         elif not value and self.has_moved is True:
             self.pos = self.pos[0], self.pos[1] - Window.height / 5
             self.has_moved = False
-
-    # def on_key_down(self, *args):
-    #     key_code = args[1]
-    #     if key_code == 21 and self.has_moved:  # BackButton in android
-    #         self.pos = self.pos[0], self.pos[1] - 25
 
 
 class SignIn(Screen):
@@ -748,7 +747,7 @@ class SignIn(Screen):
         )
         sign_in_button.bind(on_press=self.sign_in)
         container.add_widget(sign_in_button)
-
+        self.sing_in_scheduled = False
         register_button = Button(
             text="Don't have an account yet? [b]Sign Up![/b]", markup=True,
             size_hint=(None, None),
@@ -759,7 +758,7 @@ class SignIn(Screen):
             opacity=0.8,
             color=(1, 1, 1, 1)
         )
-        register_button.bind(on_press=partial(switch_to_screen, SignUp, 'sign_up'))
+        register_button.bind(on_press=partial(switch_to_screen, self, SignUp, 'sign_up'))
         container.add_widget(register_button)
 
         body.add_widget(container)
@@ -768,15 +767,46 @@ class SignIn(Screen):
 
     # noinspection PyUnusedLocal
     def sign_in(self, *args):
-        resp = login(self.user_name_text, self.password_text)
-        if resp:
-            with open(config_file, 'w') as stream:
-                user_info = json.dumps(resp)
-                stream.write(user_info)
-            screen_manager.switch_to(MainScreen())
+        if not self.sing_in_scheduled:
+            if self._sign_in():
+                self.sing_in_scheduled = True
+                Clock.schedule_once(partial(insert_progress_bar, self)) if progress_bar not in self.children else None
+                self.sign_in_event = Clock.schedule_interval(self.async_await_resp, EVENT_INTERVAL_RATE)
+
+    # noinspection PyUnusedLocal
+    def _sign_in(self, *args):
+        # print 'doing registration'
+        self.validate_login_inputs()
+        if self.validation_message == '':
+            login(resps, self.user_name_text, self.password_text)
+            return True
         else:
-            # TODO: notify
-            pass
+            Alert('Hint', self.validation_message)
+
+    # noinspection PyUnusedLocal
+    def async_await_resp(self, *args):
+        try:
+            resp = resps.get(timeout=EVENT_INTERVAL_RATE / 2)
+            self.reset()
+            if 'detail' in resp:  # Means an error occurred
+                Alert('Ops!', resp['detail'])
+            else:
+                # Store login info to configuration.yaml
+                switch_to_screen(self, MainScreen, 'main')
+        except Empty as QueueEmpty:
+            progress_bar.value += 2
+
+    def reset(self):
+        Clock.unschedule(self.sign_in_event)
+        self.remove_widget(progress_bar)
+        self.sing_in_scheduled = False
+
+    def validate_login_inputs(self):
+        self.validation_message = ''
+        if not valid_username(self.user_name_text):
+            self.validation_message = 'Invalid Username!'
+        elif not valid_password(self.password_text, self.password_text):
+            self.validation_message = 'Password must be at least 8 characters!'
 
     def update_input_text(self, *args):
         # args[0] is the referer and args[2] is the value of the textbox
@@ -895,12 +925,14 @@ class SidePanel(Screen):
 
 
 def switch_to_screen(*args):
-    screen_obj = args[0]
-    screen_name = args[1]
-    if issubclass(screen_obj, Screen):
-        screen_manager.add_widget(screen_obj(name=screen_name)) if screen_name not in screen_manager.screen_names else None
-        screen_manager.current = screen_name
-    print screen_manager.screen_names
+    referer = args[0]
+    s_obj = args[1]
+    s_name = args[2]
+    if issubclass(s_obj, Screen):
+        screen_manager.add_widget(s_obj(name=s_name)) if s_name not in screen_manager.screen_names else None
+        screen_manager.current = s_name
+        screen_manager.real_remove_widget(referer)
+    print screen_manager.children
 
 
 # noinspection PyUnusedLocal
@@ -933,6 +965,13 @@ def _move_canvas(rect, x, y):
         rect.pos = x, y + y_step
     elif direction == 'to_down':
         rect.pos = x, y - y_step
+
+
+# noinspection PyUnusedLocal
+def insert_progress_bar(widget, *args):
+    widget.add_widget(progress_bar)
+    progress_bar.pos_hint = {'center_x': 0.5, 'center_y': 0.996}
+    progress_bar.value = 0
 
 
 class CommunityApp(App):

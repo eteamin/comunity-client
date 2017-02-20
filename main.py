@@ -488,7 +488,6 @@ class SignUp(Screen):
 
     def __init__(self, name):
         self.name = name
-        self.color = color
         super(SignUp, self).__init__()
         root = BoxLayout(orientation='vertical')
 
@@ -593,7 +592,7 @@ class SignUp(Screen):
         register_trigger = Clock.create_trigger(self.register)
         register_button.bind(on_press=partial(register_trigger))
         container.add_widget(register_button)
-        self.registration_scheduled = False
+        self.event_scheduled = False
 
         login_button = Button(
             text='Already have an account? [b]Sign In![/b]', markup=True,
@@ -629,11 +628,11 @@ class SignUp(Screen):
 
     # noinspection PyUnusedLocal
     def register(self, *args):
-        if not self.registration_scheduled:
+        if not self.event_scheduled:
             if self._register():
-                self.registration_scheduled = True
+                self.event_scheduled = True
                 Clock.schedule_once(partial(insert_progress_bar, self)) if progress_bar not in self.children else None
-                self.registration_event = Clock.schedule_interval(self.async_await_resp, EVENT_INTERVAL_RATE)
+                self.event = Clock.schedule_interval(partial(async_await_resp, self), EVENT_INTERVAL_RATE)
 
     # noinspection PyUnusedLocal
     def _register(self, *args):
@@ -644,23 +643,8 @@ class SignUp(Screen):
         else:
             Alert('Hint', self.validation_message)
 
-    # noinspection PyUnusedLocal
-    def async_await_resp(self, *args):
-        try:
-            resp = resps.get(timeout=EVENT_INTERVAL_RATE / 2)
-            self.reset()
-            if 'detail' in resp:  # Means an error occurred
-                Alert('Ops!', resp['detail'])
-            else:
-                switch_to_screen(self, SignIn, 'sign_in')
-        except Empty as QueueEmpty:
-            progress_bar.value += 2
-
-    def reset(self):
-        Clock.unschedule(self.registration_event)
-        self.remove_widget(progress_bar)
-        self.registration_scheduled = False
-        progress_bar.value = 0
+    def on_resp_ready(self, resp):
+        switch_to_screen(self, SignIn, 'sign_in')
 
     def validate_registration_inputs(self):
         self.validation_message = ''
@@ -751,7 +735,7 @@ class SignIn(Screen):
         )
         sign_in_button.bind(on_press=self.sign_in)
         container.add_widget(sign_in_button)
-        self.sing_in_scheduled = False
+        self.event_scheduled = False
         register_button = Button(
             text="Don't have an account yet? [b]Sign Up![/b]", markup=True,
             size_hint=(None, None),
@@ -771,11 +755,11 @@ class SignIn(Screen):
 
     # noinspection PyUnusedLocal
     def sign_in(self, *args):
-        if not self.sing_in_scheduled:
+        if not self.event_scheduled:
             if self._sign_in():
-                self.sing_in_scheduled = True
+                self.event_scheduled = True
                 Clock.schedule_once(partial(insert_progress_bar, self)) if progress_bar not in self.children else None
-                self.sign_in_event = Clock.schedule_interval(self.async_await_resp, EVENT_INTERVAL_RATE)
+                self.event = Clock.schedule_interval(partial(async_await_resp, self), EVENT_INTERVAL_RATE)
 
     # noinspection PyUnusedLocal
     def _sign_in(self, *args):
@@ -787,25 +771,9 @@ class SignIn(Screen):
         else:
             Alert('Hint', self.validation_message)
 
-    # noinspection PyUnusedLocal
-    def async_await_resp(self, *args):
-        try:
-            resp = resps.get(timeout=EVENT_INTERVAL_RATE / 2)
-            self.reset()
-            if 'detail' in resp:  # Means an error occurred
-                Alert('Ops!', resp['detail'])
-            else:
-                # Store login info to configuration.yaml
-                write_config(resp)
-                switch_to_screen(self, MainScreen, 'main')
-        except Empty as QueueEmpty:
-            progress_bar.value += 2
-
-    def reset(self):
-        Clock.unschedule(self.sign_in_event)
-        self.remove_widget(progress_bar)
-        self.sing_in_scheduled = False
-        progress_bar.value = 0
+    def on_resp_ready(self, resp):
+        write_config(resp)
+        switch_to_screen(self, MainScreen, 'main')
 
     def validate_login_inputs(self):
         self.validation_message = ''
@@ -980,15 +948,41 @@ def insert_progress_bar(widget, *args):
     progress_bar.value = 0
 
 
+# noinspection PyUnusedLocal
+def async_await_resp(widget, dt):
+    try:
+        resp = resps.get(timeout=EVENT_INTERVAL_RATE / 2)
+        reset(widget)
+        if 'detail' in resp:  # Means an error occurred
+            Alert('Ops!', resp['detail'])
+        else:
+            widget.on_resp_ready(resp)
+    except Empty as QueueEmpty:
+        progress_bar.value += 2
+
+
+def reset(widget):
+    Clock.unschedule(widget.event)
+    widget.remove_widget(progress_bar)
+    widget.event_scheduled = False
+    progress_bar.value = 0
+
+
 def write_config(c):
     with open(config_file, 'w') as stream:
         data = json.dumps(c)
         stream.write(data)
+    _reload_config()
 
 
 def read_config():
     with open(config_file, 'r') as stream:
         return stream.read()
+
+
+def _reload_config():
+    global me
+    me = json.loads(read_config())
 
 
 class CommunityApp(App):

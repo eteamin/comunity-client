@@ -1,15 +1,17 @@
 from requests import get
 
+from request_handler.wrapper import RequestWrapper
 from variables import server_url, question_range, make_headers
 
 
-def get_questions():
-    resp = get(
+def get_questions(resps, me):
+    RequestWrapper(
+        resps,
+        'post',
         '%s/posts/get_questions' % server_url,
-        json={'from': question_range[0], 'to': question_range[1]},
-        headers=make_headers()
+        headers=make_headers(session_id=me['session'], account_id=me['id']),
+        data={'from': question_range[0], 'to': question_range[1]},
     )
-    return resp.json()['questions'] if resp.status_code == 200 else []
 
 
 def get_question(question_id, account_id):

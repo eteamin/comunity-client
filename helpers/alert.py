@@ -28,3 +28,5 @@ class Alert(Popup):
 
         popup.open()
 
+if __name__ == '__main__':
+    Alert('hello', 'bye')

@@ -20,7 +20,6 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.screenmanager import ScreenManager, Screen, NoTransition
 from kivy.clock import Clock
-from requests.exceptions import ConnectionError
 
 from drawer import NavigationDrawer
 from request_handler import *
@@ -61,42 +60,67 @@ class MainScreen(Screen):
     def __init__(self, name):
         super(MainScreen, self).__init__()
         self.name = name
-        box_container = BoxLayout(orientation='vertical')
+        self.box_container = BoxLayout(orientation='vertical')
 
-        header = GridLayout(cols=1, size_hint=(1, None), size=(Window.width, Window.height * .05))
-        with header.canvas.before:
-            Color(0.3, 0.7, 0.9, .7)
-            header.rect = Rectangle(size=header.size, pos=header.pos)
-        header.bind(pos=update_rect, size=update_rect)
-        header.add_widget(Label(text='Questions'))
+        self.header = BoxLayout(orientation='horizontal', size_hint=(None, None), size=(Window.width, Window.height * .1))
+        with self.header.canvas.before:
+            Color(0.298, 0.407, 0.843, 1)
+            self.header.rect = Rectangle(size=self.header.size, pos=self.header.pos)
+        self.header.bind(pos=update_rect, size=update_rect)
+        self.toggle_button = AsyncImage(
+            size_hint=(None, None),
+            size=(self.header.width / 15, self.header.height),
+            source='back.png',
+            padding=(100, 100),
+        )
+        self.header.add_widget(self.toggle_button)
+        self.header.add_widget(Label(text='Questions'))
 
-        nav_bar = GridLayout(cols=3, size_hint=(1, None), size=(Window.width, Window.height * .05))
-        with nav_bar.canvas.before:
-            Color(.9, .9, .9, .8)
-            nav_bar.rect = Rectangle(size=nav_bar.size, pos=nav_bar.pos)
-        nav_bar.bind(pos=update_rect, size=update_rect)
+        # self.nav_bar = GridLayout(cols=3, size_hint=(1, None), size=(Window.width, Window.height * .05))
+        # with self.nav_bar.canvas.before:
+        #     Color(.9, .9, .9, .8)
+        #     self.nav_bar.rect = Rectangle(size=self.nav_bar.size, pos=self.nav_bar.pos)
+        # self.nav_bar.bind(pos=update_rect, size=update_rect)
+        #
+        # ask_question_label = Label(text='[ref=Ask a Question]Ask a Question[/ref]', markup=True)
+        # ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen, 'new_question'))
+        # self.nav_bar.add_widget(ask_question_label)
+        # need_help_label = Label(text='[ref=Need Help?]Need Help?[/ref]', markup=True)
+        # # need_help_label.bind(on_ref_press=partial(switch_to_screen, MainScreen))
+        # self.nav_bar.add_widget(need_help_label)
 
-        ask_question_label = Label(text='[ref=Ask a Question]Ask a Question[/ref]', markup=True)
-        ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen, 'new_question'))
-        nav_bar.add_widget(ask_question_label)
-        need_help_label = Label(text='[ref=Need Help?]Need Help?[/ref]', markup=True)
-        # need_help_label.bind(on_ref_press=partial(switch_to_screen, MainScreen))
-        nav_bar.add_widget(need_help_label)
+        self.scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
+        self.body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+        self.body.bind(minimum_height=self.body.setter('height'))
 
-        scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
-        body = GridLayout(cols=1, spacing=2, size_hint_y=None)
-        body.bind(minimum_height=body.setter('height'))
-
-        with body.canvas.before:
+        with self.body.canvas.before:
             Color(.65, .72, .66, .8)
-            body.rect = Rectangle(size=(Window.width, Window.height), pos=body.pos)
-        body.bind(pos=update_rect, size=update_rect)
+            self.body.rect = Rectangle(size=(Window.width, Window.height), pos=self.body.pos)
+        self.body.bind(pos=update_rect, size=update_rect)
 
-        try:
-            questions = get_questions()
-        except ConnectionError:
-            return
-        for q in questions:
+        self.event_scheduled = True
+        self.event = Clock.schedule_interval(partial(async_await_resp, self), EVENT_INTERVAL_RATE)
+        self.scroll_view.add_widget(self.body)
+
+        self.box_container.add_widget(self.header)
+        # self.box_container.add_widget(self.nav_bar)
+        self.box_container.add_widget(self.scroll_view)
+        self.navigation_drawer = NavigationDrawer()
+        self.navigation_drawer.anim_type = 'slide_above_anim'
+        side_panel = SidePanel()
+        self.navigation_drawer.add_widget(side_panel)
+        self.navigation_drawer.add_widget(self.box_container)
+        Window.add_widget(self.navigation_drawer)
+        Clock.schedule_once(
+            partial(insert_progress_bar, Window)) if progress_bar not in self.children else None
+        get_questions(resps, me)
+
+    def on_touch_down(self, touch):
+        if self.toggle_button.collide_point(*touch.pos):
+            self.navigation_drawer.toggle_state()
+
+    def on_resp_ready(self, resp):
+        for q in resp['questions']:
             container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 4))
             with container.canvas.before:
                 Line(points=[container.x, container.x, container.width, container.x, 0, 0], width=1)
@@ -156,39 +180,25 @@ class MainScreen(Screen):
             )
             username.bind(on_ref_press=partial(self.select_user, q['accounts']['id']))
             container.add_widget(username)
+            image = q['accounts']['image']
             user_image = AsyncImage(
-                source='http://localhost:8080/1.png',
+                source='back.png' if not image else image,
                 pos_hint={'center_x': 0.8, 'center_y': 0.39},
                 size_hint=(None, None),
                 size=(Window.width / 8, Window.height / 8)
             )
             container.add_widget(user_image)
-            body.add_widget(container)
+            self.body.add_widget(container)
 
-        scroll_view.add_widget(body)
-
-        box_container.add_widget(header)
-        box_container.add_widget(nav_bar)
-        box_container.add_widget(scroll_view)
-
-        navigation_drawer = NavigationDrawer()
-
-        side_panel = SidePanel()
-        navigation_drawer.add_widget(side_panel)
-        navigation_drawer.add_widget(box_container)
-        Window.add_widget(navigation_drawer)
-
-    @staticmethod
-    def select_question(*args):
+    def select_question(self, *args):
         global question_id
         question_id = args[0]
-        switch_to_screen(QuestionScreen, 'question')
+        switch_to_screen(self, QuestionScreen, 'question')
 
-    @staticmethod
-    def select_user(*args):
+    def select_user(self, *args):
         global user_id
         user_id = args[0]
-        switch_to_screen(UserScreen)
+        switch_to_screen(self, UserScreen, 'user')
 
 
 class NewQuestionScreen(Screen):
@@ -864,7 +874,7 @@ class SidePanel(Screen):
 
     def __init__(self):
         super(SidePanel, self).__init__()
-        if me and me['id']:
+        if me:
             body = GridLayout(cols=1, spacing=2, size_hint=(1, None), size=(Window.width, Window.height))
             body.bind(minimum_height=body.setter('height'))
             container = RelativeLayout()
@@ -905,7 +915,8 @@ def switch_to_screen(*args):
     if issubclass(s_obj, Screen):
         screen_manager.add_widget(s_obj(name=s_name)) if s_name not in screen_manager.screen_names else None
         screen_manager.current = s_name
-        screen_manager.real_remove_widget(referer)
+        if referer:
+            screen_manager.real_remove_widget(referer)
     print screen_manager.children
 
 
@@ -963,7 +974,10 @@ def async_await_resp(widget, dt):
 
 def reset(widget):
     Clock.unschedule(widget.event)
-    widget.remove_widget(progress_bar)
+    if hasattr(widget, 'progress_bar'):
+        widget.remove_widget(progress_bar)
+    else:
+        Window.remove_widget(progress_bar)
     widget.event_scheduled = False
     progress_bar.value = 0
 
@@ -990,11 +1004,11 @@ class CommunityApp(App):
         global me
         user_info = read_config()
         if user_info:
-            me = json.loads(user_info)
+            me = json.loads(user_info)['user']
             if me and 'id' in me:
-                screen_manager.add_widget(MainScreen(name='main'))
+                switch_to_screen(None, MainScreen, 'main')
         else:
-            screen_manager.add_widget(SignUp(name='sign_up'))
+            switch_to_screen(None, SignUp, 'sign_up')
 
     def on_pause(self):
         return True

@@ -1,31 +1,14 @@
-from kivy.app import App
-from kivy.uix.button import Button
-from kivy.uix.boxlayout import BoxLayout
-from kivy.lang import Builder
-
-layout = """
-Box:
-    BoxLayout:
-        Button:
-            id: butt
-            text: ""
-            on_press: root.change()
-        Label:
-            id: label_text
-"""
+import time
+import requests
 
 
-class Box(BoxLayout):
-    def change(self):
-            variable = 0
-            while variable < 10:
-                text = "Some text " + str(variable)
-                variable += 1
-
-
-class TestApp(App):
-    def build(self):
-        Builder.load_string(layout)
-        return Box()
-
-TestApp().run()
+for i in range(3, 2500):
+    a= requests.post('http://192.168.1.101:8080/posts', json={
+        'post_type': 'Question',
+        'account_id': 2,
+        'description': i,
+        'title': i,
+        'tags': 'hello',
+        'parent_id': None
+    })
+    print a.json()

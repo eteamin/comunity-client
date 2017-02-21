@@ -1,46 +1,40 @@
 from kivy.app import App
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
-from kivy.properties import StringProperty
 from kivy.lang import Builder
-from kivy.clock import Clock
-
-layout = """
-<Box>:
-    orientation: 'vertical'
-    Button:
-        id: butt
-        text: "hello"
-        size_hint: (None, None)
-        size: (100, 100)
-        on_press: root.change()
-    Label:
-        id: label_text
-        text: root.label_text
-"""
+from kivy.uix.anchorlayout import AnchorLayout
+from kivy.uix.popup import Popup
+from kivy.uix.label import Label
+from kivy.uix.button import Button
+from kivy.core.window import Window
 
 
-class Box(BoxLayout):
-    label_text = StringProperty()
-    interval = 0.5  # Second
-    offset = 0
+class Alert(Popup):
 
-    def change(self):
-        # You ask the clock to update the label's value every self.interval (0.5) second
-        self.event = Clock.schedule_interval(self.update_label_text, self.interval)
+    def __init__(self):
+        super(Alert, self).__init__()
+        content = AnchorLayout(anchor_x='center', anchor_y='bottom')
+        content.add_widget(
+            Label(text='hello', halign='left', valign='top')
+        )
+        ok_button = Button(text='Ok', size_hint=(None, None), size=(Window.width / 3, Window.height / 15))
+        content.add_widget(ok_button)
 
-    def update_label_text(self, dt):
-        if self.offset < 10:
-            self.label_text = "some_text" + str(self.offset)
-            self.offset += 1
-        else:
-            # Finally ask the clock to forget about the update
-            Clock.unschedule(self.event)
+        popup = Popup(
+            title='bye',
+            content=content,
+            size_hint=(None, None),
+            size=(Window.width / 1.1, Window.height / 3),
+            opacity=0.7,
+            auto_dismiss=True,
+        )
+        ok_button.bind(on_press=popup.dismiss)
+
+        popup.open()
 
 
 class TestApp(App):
     def build(self):
-        Builder.load_string(layout)
-        return Box()
+        return Alert()
 
 TestApp().run()

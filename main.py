@@ -17,9 +17,13 @@ from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
+from kivy.effects.scroll import ScrollEffect
+from kivy.effects.dampedscroll import DampedScrollEffect
 from kivy.uix.progressbar import ProgressBar
-from kivy.uix.screenmanager import ScreenManager, Screen, NoTransition
+from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.clock import Clock
+from kivy.utils import get_color_from_hex
+# from plyer.platforms.android.notification import AndroidNotification
 
 from drawer import NavigationDrawer
 from request_handler import *
@@ -45,7 +49,7 @@ canvas_move_direction = 'to_left'
 config_file = path.abspath(path.join(path.dirname(__file__), 'configuration.json'))
 logo_font_path = path.abspath(path.join(path.dirname(__file__), 'fonts', 'free_bsc.ttf'))
 
-screen_manager = ScreenManager(transition=NoTransition())
+screen_manager = ScreenManager(transition=FadeTransition())
 color = (0.9, 0.9, 0.9, 0.5)
 
 
@@ -75,31 +79,18 @@ class MainScreen(Screen):
         )
         self.header.add_widget(self.toggle_button)
         self.header.add_widget(Label(text='Questions'))
-
-        # self.nav_bar = GridLayout(cols=3, size_hint=(1, None), size=(Window.width, Window.height * .05))
-        # with self.nav_bar.canvas.before:
-        #     Color(.9, .9, .9, .8)
-        #     self.nav_bar.rect = Rectangle(size=self.nav_bar.size, pos=self.nav_bar.pos)
-        # self.nav_bar.bind(pos=update_rect, size=update_rect)
-        #
-        # ask_question_label = Label(text='[ref=Ask a Question]Ask a Question[/ref]', markup=True)
-        # ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen, 'new_question'))
-        # self.nav_bar.add_widget(ask_question_label)
-        # need_help_label = Label(text='[ref=Need Help?]Need Help?[/ref]', markup=True)
-        # # need_help_label.bind(on_ref_press=partial(switch_to_screen, MainScreen))
-        # self.nav_bar.add_widget(need_help_label)
-
         self.scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
+        self.scroll_view.bar_width = '5dp'
+        self.scroll_view.effect_cls = ScrollEffect
         self.body = GridLayout(cols=1, spacing=2, size_hint_y=None)
         self.body.bind(minimum_height=self.body.setter('height'))
 
         with self.body.canvas.before:
-            Color(.65, .72, .66, .8)
+            Color(0.956, 1, 1, 0.6)
             self.body.rect = Rectangle(size=(Window.width, Window.height), pos=self.body.pos)
         self.body.bind(pos=update_rect, size=update_rect)
 
         self.event_scheduled = True
-        self.event = Clock.schedule_interval(partial(async_await_resp, self), EVENT_INTERVAL_RATE)
         self.scroll_view.add_widget(self.body)
 
         self.box_container.add_widget(self.header)
@@ -113,6 +104,7 @@ class MainScreen(Screen):
         Window.add_widget(self.navigation_drawer)
         Clock.schedule_once(
             partial(insert_progress_bar, Window)) if progress_bar not in self.children else None
+        self.event = Clock.schedule_interval(partial(async_await_resp, self), EVENT_INTERVAL_RATE)
         get_questions(resps, me)
 
     def on_touch_down(self, touch):
@@ -121,25 +113,23 @@ class MainScreen(Screen):
 
     def on_resp_ready(self, resp):
         for q in resp['questions']:
-            container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 4))
+            container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 5))
             with container.canvas.before:
-                Line(points=[container.x, container.x, container.width, container.x, 0, 0], width=1)
+                Line(points=[container.x, container.x, container.width / 1.03, container.x, 0, 0], width=1)
+                Line(points=[Window.width / 5.5, 10, Window.width / 5.5, container.height - 10], width=1)
 
             title = Label(
                 text='[ref=%s]%s[/ref]' % (q['title'], q['title']),
                 markup=True,
-                pos_hint={'center_x': 0.55, 'center_y': 1},
+                pos_hint={'center_x': 0.45, 'center_y': 0.9},
                 color=(0.5, 0.7, 1, 1),
                 font_size=dp(15),
                 underline=True,
                 halign='left',
                 valgin='middle',
-                outline_width=500
             )
-            # print title.size
-            # TODO: never ever do this again
-            title.text_size = [500, 100]
             title.bind(on_ref_press=partial(self.select_question, q['id']))
+            title.text_size = (container.size[0] / 2, container.size[1])
             # title.on_touch_down()
             container.add_widget(title)
             container.add_widget(Label(text=str(len(q['votes'])), pos_hint={'center_x': 0.1, 'center_y': 0.65}))
@@ -166,15 +156,15 @@ class MainScreen(Screen):
             container.add_widget(tags_container)
             creation_date = Label(
                 text=tell_time_ago(q['creation_date']),
-                pos_hint={'center_x': 0.6, 'center_y': 0.39},
+                pos_hint={'center_x': 0.7, 'center_y': 0.1},
                 font_size=dp(12),
                 halign='left'
             )
-            creation_date.text_size = creation_date.size
+            # creation_date.text_size = creation_date.size
             container.add_widget(creation_date)
             username = Label(
                 text="[ref=%s]%s[/ref]" % (q['accounts']['username'], q['accounts']['username']), markup=True,
-                pos_hint={'center_x': 0.8, 'center_y': 0.1},
+                pos_hint={'center_x': 0.9, 'center_y': 0.1},
                 font_size=dp(15),
                 color=(0, 1, .4, .8)
             )
@@ -183,7 +173,7 @@ class MainScreen(Screen):
             image = q['accounts']['image']
             user_image = AsyncImage(
                 source='back.png' if not image else image,
-                pos_hint={'center_x': 0.8, 'center_y': 0.39},
+                pos_hint={'center_x': 0.9, 'center_y': 0.39},
                 size_hint=(None, None),
                 size=(Window.width / 8, Window.height / 8)
             )
@@ -641,7 +631,7 @@ class SignUp(Screen):
         if not self.event_scheduled:
             if self._register():
                 self.event_scheduled = True
-                Clock.schedule_once(partial(insert_progress_bar, self)) if progress_bar not in self.children else None
+                Clock.schedule_once(partial(insert_progress_bar)) if progress_bar not in self.children else None
                 self.event = Clock.schedule_interval(partial(async_await_resp, self), EVENT_INTERVAL_RATE)
 
     # noinspection PyUnusedLocal
@@ -877,35 +867,47 @@ class SidePanel(Screen):
         if me:
             body = GridLayout(cols=1, spacing=2, size_hint=(1, None), size=(Window.width, Window.height))
             body.bind(minimum_height=body.setter('height'))
+            with body.canvas.before:
+                Color(0.956, 1, 1, 0.2)
+                body.rect = Rectangle(size=(Window.width, Window.height), pos=body.pos)
+            body.bind(pos=update_rect, size=update_rect)
             container = RelativeLayout()
-            # get_image(user['id'])
-            # img_src = '%s/%s.jpg' % (files_path, user['id'])
-            # profile_picture = Image(
-            #     source=img_src,
-            #     pos_hint={'center_x': 0.5, 'center_y': 0.8},
-            #     size_hint=(1, None),
-            #     size=(Window.width / 5, Window.height / 5)
-            # )
-            # container.add_widget(profile_picture)
-            # display_name = Label(text=me['display_name'], pos_hint={'center_x': 0.5, 'center_y': 0.4})
-            # container.add_widget(display_name)
-            # container.add_widget(Label(text=me['age'], pos_hint={'center_x': 0.5, 'center_y': 0.5}, font_size=dp(20)))
-            # container.add_widget(Label(text=me['gender'], pos_hint={'center_x': 0.5, 'center_y': 0.2}))
-            container.add_widget(Label(text=str(me['reputation']), pos_hint={'center_x': 0.5, 'center_y': 0.1}))
+
+            profile_picture = AsyncImage(
+                source='back.png' if not me['image'] else me['image'],
+                pos_hint={'center_x': 0.5, 'center_y': 0.9},
+                size_hint=(None, None),
+                size=(Window.width / 5, Window.height / 5)
+            )
+            container.add_widget(profile_picture)
+            container.add_widget(Label(text=str(me['username']), pos_hint={'center_x': 0.5, 'center_y': 0.8}))
+            container.add_widget(Label(text=str(me['reputation']), pos_hint={'center_x': 0.3, 'center_y': 0.7}))
+
+            home = AsyncImage(
+                source='home.png',
+                pos_hint={'center_x': 0.2, 'center_y': 0.55},
+                size_hint=(None, None),
+                size=(Window.width / 15, Window.height / 15)
+            )
+            self.add_widget(Label(
+                text='Home',
+                pos_hint={'center_x': 0.5, 'center_y': 0.55},
+            ))
+            container.add_widget(home)
             body.add_widget(container)
             # a = FileChooserIconView()
             # a.filters = ['*.png', '*.jpg', '*.jpeg']
             # a.bind(on_submit=self.choose_file)
             # close = Button(size_hint=(None, None), size=(50, 50))
             # close.bind(on_press=partial(self.close_file_chooser, a))
-            # # self.add_widget(a)
+            # self.add_widget(a)
             self.add_widget(body)
 
-    def choose_file(self, *args):
-        post_image(me['id'], args[1][0])
-
-    def close_file_chooser(self, *args):
-        self.remove_widget(args[0])
+    # def choose_file(self, *args):
+    #     post_image(me['id'], args[1][0])
+    #
+    # def close_file_chooser(self, *args):
+    #     self.remove_widget(args[0])
 
 
 def switch_to_screen(*args):
@@ -953,8 +955,8 @@ def _move_canvas(rect, x, y):
 
 
 # noinspection PyUnusedLocal
-def insert_progress_bar(widget, *args):
-    widget.add_widget(progress_bar)
+def insert_progress_bar(*args):
+    Window.add_widget(progress_bar)
     progress_bar.pos_hint = {'center_x': 0.5, 'center_y': 0.996}
     progress_bar.value = 0
 
@@ -974,10 +976,7 @@ def async_await_resp(widget, dt):
 
 def reset(widget):
     Clock.unschedule(widget.event)
-    if hasattr(widget, 'progress_bar'):
-        widget.remove_widget(progress_bar)
-    else:
-        Window.remove_widget(progress_bar)
+    Window.remove_widget(progress_bar)
     widget.event_scheduled = False
     progress_bar.value = 0
 
@@ -996,7 +995,7 @@ def read_config():
 
 def _reload_config():
     global me
-    me = json.loads(read_config())
+    me = json.loads(read_config())['user']
 
 
 class CommunityApp(App):

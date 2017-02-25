@@ -17,7 +17,6 @@ from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
-from kivy.effects.scroll import ScrollEffect
 from kivy.effects.dampedscroll import DampedScrollEffect
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
@@ -27,7 +26,7 @@ from kivy.utils import get_color_from_hex
 
 from drawer import NavigationDrawer
 from request_handler import *
-from helpers import normalize_tags, tell_time_ago, find_step, Alert, valid_email, valid_password, valid_username
+from helpers import *
 
 resps = Queue()
 
@@ -81,7 +80,7 @@ class MainScreen(Screen):
         self.header.add_widget(Label(text='Questions'))
         self.scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
         self.scroll_view.bar_width = '5dp'
-        self.scroll_view.effect_cls = ScrollEffect
+        self.scroll_view.effect_cls = OverScrollEffect
         self.body = GridLayout(cols=1, spacing=2, size_hint_y=None)
         self.body.bind(minimum_height=self.body.setter('height'))
 
@@ -113,10 +112,10 @@ class MainScreen(Screen):
 
     def on_resp_ready(self, resp):
         for q in resp['questions']:
-            container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 5))
-            with container.canvas.before:
-                Line(points=[container.x, container.x, container.width / 1.03, container.x, 0, 0], width=1)
-                Line(points=[Window.width / 5.5, 10, Window.width / 5.5, container.height - 10], width=1)
+            self.container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 5))
+            with self.container.canvas.before:
+                Line(points=[self.container.x, self.container.x, self.container.width / 1.03, self.container.x, 0, 0], width=1)
+                Line(points=[Window.width / 5.5, 10, Window.width / 5.5, self.container.height - 10], width=1)
 
             title = Label(
                 text='[ref=%s]%s[/ref]' % (q['title'], q['title']),
@@ -129,13 +128,13 @@ class MainScreen(Screen):
                 valgin='middle',
             )
             title.bind(on_ref_press=partial(self.select_question, q['id']))
-            title.text_size = (container.size[0] / 2, container.size[1])
+            title.text_size = (self.container.size[0] / 2, self.container.size[1])
             # title.on_touch_down()
-            container.add_widget(title)
-            container.add_widget(Label(text=str(len(q['votes'])), pos_hint={'center_x': 0.1, 'center_y': 0.65}))
-            container.add_widget(Label(text='Votes' if len(q['votes']) > 1 else 'Vote', pos_hint={'center_x': 0.1, 'center_y': 0.55}, font_size=dp(12)))
-            container.add_widget(Label(text=str(len(q['views'])), pos_hint={'center_x': 0.1, 'center_y': 0.4}))
-            container.add_widget(Label(text='Views' if len(q['views']) > 1 else 'View', pos_hint={'center_x': 0.1, 'center_y': 0.3}, font_size=dp(12)))
+            self.container.add_widget(title)
+            self.container.add_widget(Label(text=str(len(q['votes'])), pos_hint={'center_x': 0.1, 'center_y': 0.65}))
+            self.container.add_widget(Label(text='Votes' if len(q['votes']) > 1 else 'Vote', pos_hint={'center_x': 0.1, 'center_y': 0.55}, font_size=dp(12)))
+            self.container.add_widget(Label(text=str(len(q['views'])), pos_hint={'center_x': 0.1, 'center_y': 0.4}))
+            self.container.add_widget(Label(text='Views' if len(q['views']) > 1 else 'View', pos_hint={'center_x': 0.1, 'center_y': 0.3}, font_size=dp(12)))
 
             # Handle tags
             tags_container = BoxLayout(
@@ -153,7 +152,7 @@ class MainScreen(Screen):
                 )
                 # tag.text_size = tag.size
                 tags_container.add_widget(tag)
-            container.add_widget(tags_container)
+                self.container.add_widget(tags_container)
             creation_date = Label(
                 text=tell_time_ago(q['creation_date']),
                 pos_hint={'center_x': 0.7, 'center_y': 0.1},
@@ -161,7 +160,7 @@ class MainScreen(Screen):
                 halign='left'
             )
             # creation_date.text_size = creation_date.size
-            container.add_widget(creation_date)
+            self.container.add_widget(creation_date)
             username = Label(
                 text="[ref=%s]%s[/ref]" % (q['accounts']['username'], q['accounts']['username']), markup=True,
                 pos_hint={'center_x': 0.9, 'center_y': 0.1},
@@ -169,7 +168,7 @@ class MainScreen(Screen):
                 color=(0, 1, .4, .8)
             )
             username.bind(on_ref_press=partial(self.select_user, q['accounts']['id']))
-            container.add_widget(username)
+            self.container.add_widget(username)
             image = q['accounts']['image']
             user_image = AsyncImage(
                 source='back.png' if not image else image,
@@ -177,8 +176,8 @@ class MainScreen(Screen):
                 size_hint=(None, None),
                 size=(Window.width / 8, Window.height / 8)
             )
-            container.add_widget(user_image)
-            self.body.add_widget(container)
+            self.container.add_widget(user_image)
+            self.body.add_widget(self.container)
 
     def select_question(self, *args):
         global question_id

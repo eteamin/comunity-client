@@ -21,7 +21,7 @@ from kivy.effects.dampedscroll import DampedScrollEffect
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.clock import Clock
-from kivy.utils import get_color_from_hex
+from kivy.utils import platform
 # from plyer.platforms.android.notification import AndroidNotification
 
 from drawer import NavigationDrawer
@@ -59,13 +59,13 @@ def update_rect(instance, value):
 
 
 class MainScreen(Screen):
-
     def __init__(self, name):
         super(MainScreen, self).__init__()
         self.name = name
         self.box_container = BoxLayout(orientation='vertical')
 
-        self.header = BoxLayout(orientation='horizontal', size_hint=(None, None), size=(Window.width, Window.height * .1))
+        self.header = BoxLayout(orientation='horizontal', size_hint=(None, None),
+                                size=(Window.width, Window.height * .1))
         with self.header.canvas.before:
             Color(0.298, 0.407, 0.843, 1)
             self.header.rect = Rectangle(size=self.header.size, pos=self.header.pos)
@@ -114,7 +114,8 @@ class MainScreen(Screen):
         for q in resp['questions']:
             self.container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 5))
             with self.container.canvas.before:
-                Line(points=[self.container.x, self.container.x, self.container.width / 1.03, self.container.x, 0, 0], width=1)
+                Line(points=[self.container.x, self.container.x, self.container.width / 1.03, self.container.x, 0, 0],
+                     width=1)
                 Line(points=[Window.width / 5.5, 10, Window.width / 5.5, self.container.height - 10], width=1)
 
             title = Label(
@@ -132,9 +133,13 @@ class MainScreen(Screen):
             # title.on_touch_down()
             self.container.add_widget(title)
             self.container.add_widget(Label(text=str(len(q['votes'])), pos_hint={'center_x': 0.1, 'center_y': 0.65}))
-            self.container.add_widget(Label(text='Votes' if len(q['votes']) > 1 else 'Vote', pos_hint={'center_x': 0.1, 'center_y': 0.55}, font_size=dp(12)))
+            self.container.add_widget(
+                Label(text='Votes' if len(q['votes']) > 1 else 'Vote', pos_hint={'center_x': 0.1, 'center_y': 0.55},
+                      font_size=dp(12)))
             self.container.add_widget(Label(text=str(len(q['views'])), pos_hint={'center_x': 0.1, 'center_y': 0.4}))
-            self.container.add_widget(Label(text='Views' if len(q['views']) > 1 else 'View', pos_hint={'center_x': 0.1, 'center_y': 0.3}, font_size=dp(12)))
+            self.container.add_widget(
+                Label(text='Views' if len(q['views']) > 1 else 'View', pos_hint={'center_x': 0.1, 'center_y': 0.3},
+                      font_size=dp(12)))
 
             # Handle tags
             tags_container = BoxLayout(
@@ -314,7 +319,7 @@ class NewQuestionScreen(Screen):
         resp = post_question(self.title_input_text, self.question_input_text, int(me['id']), tags=tags)
         if resp:
             screen_manager.switch_to(MainScreen())
-        # TODO: Implement handling of possible exceptions
+            # TODO: Implement handling of possible exceptions
 
     # noinspection PyUnusedLocal
     def on_tag_selection(self, *args):
@@ -384,9 +389,9 @@ class QuestionScreen(Screen):
                 Color(.65, .72, .66, .8)
                 body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=body.pos)
             body.bind(pos=update_rect, size=update_rect)
-            
+
             question = get_question(question_id, me['id'])
-            
+
             question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
             title = Label(
                 text=question['title'],
@@ -397,7 +402,8 @@ class QuestionScreen(Screen):
             question_container.add_widget(title)
             # question_container.add_widget(Label(text=question['votes'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
             # container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
-            question_container.add_widget(Label(text=question['creation_date'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
+            question_container.add_widget(
+                Label(text=question['creation_date'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
             body.add_widget(question_container)
 
             for a in get_children(question['id']):
@@ -445,7 +451,7 @@ class QuestionScreen(Screen):
         resp = post_answer(self.answer_text, me['id'], question_id)
         if resp:
             switch_to_screen(QuestionScreen)
-        # TODO: implement exception handling
+            # TODO: implement exception handling
 
     def update_input_text(self, *args):
         referer = args[0]
@@ -860,7 +866,6 @@ class RankScreen(Screen):
 
 
 class SidePanel(Screen):
-
     def __init__(self):
         super(SidePanel, self).__init__()
         if me:
@@ -902,11 +907,11 @@ class SidePanel(Screen):
             # self.add_widget(a)
             self.add_widget(body)
 
-    # def choose_file(self, *args):
-    #     post_image(me['id'], args[1][0])
-    #
-    # def close_file_chooser(self, *args):
-    #     self.remove_widget(args[0])
+            # def choose_file(self, *args):
+            #     post_image(me['id'], args[1][0])
+            #
+            # def close_file_chooser(self, *args):
+            #     self.remove_widget(args[0])
 
 
 def switch_to_screen(*args):
@@ -1018,6 +1023,12 @@ class CommunityApp(App):
         pass
 
     def build(self):
+        if platform == 'android':
+            from jnius import autoclass
+            service = autoclass('org.test.community.ServiceNotif')
+            mActivity = autoclass('org.kivy.android.PythonActivity').mActivity
+            argument = ''
+            service.start(mActivity, argument)
         return screen_manager
 
 

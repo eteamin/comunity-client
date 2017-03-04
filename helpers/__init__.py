@@ -5,6 +5,7 @@ from timedelta import tell_time_ago
 from alert import Alert
 from overscroll import OverScrollEffect
 
+
 def find_step(size):
     return [i for i in range(20, 30) if size % i == 0][0]
 

@@ -23,7 +23,7 @@ from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.clock import Clock
 from kivy.utils import platform
 # from plyer.platforms.android.notification import AndroidNotification
-
+import websocket
 from drawer import NavigationDrawer
 from request_handler import *
 from helpers import *
@@ -1024,11 +1024,8 @@ class CommunityApp(App):
 
     def build(self):
         if platform == 'android':
-            from jnius import autoclass
-            service = autoclass('org.test.community.ServiceNotif')
-            mActivity = autoclass('org.kivy.android.PythonActivity').mActivity
-            argument = ''
-            service.start(mActivity, argument)
+            import android
+            android.start_service(title='hello', description='nth', arg='nth')
         return screen_manager
 
 

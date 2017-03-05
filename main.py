@@ -1,8 +1,8 @@
 from functools import partial
-from os import path
+from os import path, environ
 import json
 from Queue import Queue, Empty
-
+from jnius import autoclass
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, Line
@@ -17,13 +17,10 @@ from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
-from kivy.effects.dampedscroll import DampedScrollEffect
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.clock import Clock
 from kivy.utils import platform
-# from plyer.platforms.android.notification import AndroidNotification
-import websocket
 from drawer import NavigationDrawer
 from request_handler import *
 from helpers import *

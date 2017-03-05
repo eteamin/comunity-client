@@ -1,6 +1,6 @@
 from requests import post
 
-from variables import server_url, make_headers
+from helpers.variables import server_url, make_headers
 
 
 def post_question(title, content, account_id, tags):

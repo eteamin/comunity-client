@@ -1,7 +1,7 @@
 from requests import get
 
 from request_handler.wrapper import RequestWrapper
-from variables import server_url, question_range, make_headers
+from helpers.variables import server_url, question_range, make_headers
 
 
 def get_questions(resps, me):

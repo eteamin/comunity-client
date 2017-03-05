@@ -1,4 +1,4 @@
-from variables import server_url, make_headers
+from helpers.variables import server_url, make_headers
 
 from wrapper import RequestWrapper
 

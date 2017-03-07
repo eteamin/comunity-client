@@ -10,7 +10,7 @@ from kivy.metrics import dp
 from kivy.graphics.texture import Texture
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.image import AsyncImage
+from kivy.uix.image import AsyncImage, Image
 from kivy.uix.popup import Popup
 from kivy.uix.button import Button
 from kivy.uix.label import Label
@@ -67,7 +67,7 @@ class MainScreen(Screen):
             Color(0.298, 0.407, 0.843, 1)
             self.header.rect = Rectangle(size=self.header.size, pos=self.header.pos)
         self.header.bind(pos=update_rect, size=update_rect)
-        self.toggle_button = AsyncImage(
+        self.toggle_button = Image(
             size_hint=(None, None),
             size=(self.header.width / 15, self.header.height),
             source='back.png',
@@ -111,7 +111,7 @@ class MainScreen(Screen):
         for q in resp['questions']:
             self.container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 5))
             with self.container.canvas.before:
-                Color(0, 0, 0, 1)
+                Color(0, 0, 0, 0.7)
                 Line(
                     points=[self.container.x, self.container.x, self.container.width / 1.03, self.container.x, 0, 0],
                     width=1,
@@ -145,6 +145,14 @@ class MainScreen(Screen):
                     pos_hint={'center_x': 0.1, 'center_y': 0.55},
                     font_size=dp(12),
                     color=(0, 0, 0, 1)
+                )
+            )
+            self.container.add_widget(
+                Image(
+                    size_hint=(None, None),
+                    size=(self.container.width / 5, self.container.height / 5),
+                    source='vote.png',
+                    pos_hint={'center_x': 0.05, 'center_y': 0.65},
                 )
             )
             self.container.add_widget(

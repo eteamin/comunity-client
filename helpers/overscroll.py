@@ -108,7 +108,7 @@ class OverScrollEffect(KineticEffect):
         return super(OverScrollEffect, self).stop(val, t)
 
     def on_overscroll(self, *args):
-        if abs(self.scroll) > 250:
+        if abs(self.scroll) > 250 and len(self.target_widget.children) > 0:
             self.target_widget.children[-1].opacity = 0.7
             Clock.schedule_once(self.change_opacity, 0.3)
         self.trigger_velocity_update()

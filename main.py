@@ -2,7 +2,7 @@ from functools import partial
 from os import path, environ
 import json
 from Queue import Queue, Empty
-from jnius import autoclass
+# from jnius import autoclass
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, Line
@@ -82,7 +82,7 @@ class MainScreen(Screen):
         self.body.bind(minimum_height=self.body.setter('height'))
 
         with self.body.canvas.before:
-            Color(0.956, 1, 1, 0.6)
+            Color(0.945, 0.945, 0.945, 1)
             self.body.rect = Rectangle(size=(Window.width, Window.height), pos=self.body.pos)
         self.body.bind(pos=update_rect, size=update_rect)
 
@@ -111,16 +111,19 @@ class MainScreen(Screen):
         for q in resp['questions']:
             self.container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 5))
             with self.container.canvas.before:
-                Line(points=[self.container.x, self.container.x, self.container.width / 1.03, self.container.x, 0, 0],
-                     width=1)
+                Color(0, 0, 0, 1)
+                Line(
+                    points=[self.container.x, self.container.x, self.container.width / 1.03, self.container.x, 0, 0],
+                    width=1,
+                )
                 Line(points=[Window.width / 5.5, 10, Window.width / 5.5, self.container.height - 10], width=1)
 
             title = Label(
-                text='[ref=%s]%s[/ref]' % (q['title'], q['title']),
+                text='[ref=%s][b]%s[/b][/ref]' % (q['title'], q['title']),
                 markup=True,
-                pos_hint={'center_x': 0.45, 'center_y': 0.9},
-                color=(0.5, 0.7, 1, 1),
-                font_size=dp(15),
+                pos_hint={'center_x': 0.45, 'center_y': 1},
+                color=(0, 0, 0, 1),
+                font_size=dp(14),
                 underline=True,
                 halign='left',
                 valgin='middle',
@@ -129,14 +132,36 @@ class MainScreen(Screen):
             title.text_size = (self.container.size[0] / 2, self.container.size[1])
             # title.on_touch_down()
             self.container.add_widget(title)
-            self.container.add_widget(Label(text=str(len(q['votes'])), pos_hint={'center_x': 0.1, 'center_y': 0.65}))
             self.container.add_widget(
-                Label(text='Votes' if len(q['votes']) > 1 else 'Vote', pos_hint={'center_x': 0.1, 'center_y': 0.55},
-                      font_size=dp(12)))
-            self.container.add_widget(Label(text=str(len(q['views'])), pos_hint={'center_x': 0.1, 'center_y': 0.4}))
+                Label(
+                    text=str(len(q['votes'])),
+                    pos_hint={'center_x': 0.1, 'center_y': 0.65},
+                    color=(0, 0, 0, 1)
+                )
+            )
             self.container.add_widget(
-                Label(text='Views' if len(q['views']) > 1 else 'View', pos_hint={'center_x': 0.1, 'center_y': 0.3},
-                      font_size=dp(12)))
+                Label(
+                    text='Votes' if len(q['votes']) > 1 else 'Vote',
+                    pos_hint={'center_x': 0.1, 'center_y': 0.55},
+                    font_size=dp(12),
+                    color=(0, 0, 0, 1)
+                )
+            )
+            self.container.add_widget(
+                Label(
+                    text=str(len(q['views'])),
+                    pos_hint={'center_x': 0.1, 'center_y': 0.4},
+                    color=(0, 0, 0, 1)
+                )
+            )
+            self.container.add_widget(
+                Label(
+                    text='Views' if len(q['views']) > 1 else 'View',
+                    pos_hint={'center_x': 0.1, 'center_y': 0.3},
+                    font_size=dp(12),
+                    color=(0, 0, 0, 1)
+                )
+            )
 
             # Handle tags
             tags_container = BoxLayout(
@@ -159,7 +184,8 @@ class MainScreen(Screen):
                 text=tell_time_ago(q['creation_date']),
                 pos_hint={'center_x': 0.7, 'center_y': 0.1},
                 font_size=dp(12),
-                halign='left'
+                halign='left',
+                color=(0, 0, 0, 1)
             )
             # creation_date.text_size = creation_date.size
             self.container.add_widget(creation_date)
@@ -167,7 +193,7 @@ class MainScreen(Screen):
                 text="[ref=%s]%s[/ref]" % (q['accounts']['username'], q['accounts']['username']), markup=True,
                 pos_hint={'center_x': 0.9, 'center_y': 0.1},
                 font_size=dp(15),
-                color=(0, 1, .4, .8)
+                color=(0, 0, 0, 0.9)
             )
             username.bind(on_ref_press=partial(self.select_user, q['accounts']['id']))
             self.container.add_widget(username)
@@ -180,6 +206,7 @@ class MainScreen(Screen):
             )
             self.container.add_widget(user_image)
             self.body.add_widget(self.container)
+            self.container.clearcolor = (1, 1, 0, 0.5)
 
     def select_question(self, *args):
         global question_id
@@ -216,7 +243,7 @@ class NewQuestionScreen(Screen):
 
         nav_bar = GridLayout(cols=3, size_hint=(1, None), size=(Window.width, Window.height * .05))
         with nav_bar.canvas.before:
-            Color(.9, .9, .9, .8)
+            Color(.9, .9, .9, .2)
             nav_bar.rect = Rectangle(size=nav_bar.size, pos=nav_bar.pos)
         nav_bar.bind(pos=update_rect, size=update_rect)
 

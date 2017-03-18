@@ -4,12 +4,12 @@ from request_handler.wrapper import RequestWrapper
 from helpers.variables import server_url, question_range, make_headers
 
 
-def get_questions(resps, me):
+def get_questions(resps, id, session):
     RequestWrapper(
         resps,
         'post',
         '%s/posts/get_questions' % server_url,
-        headers=make_headers(session_id=me['session'], account_id=me['id']),
+        headers=make_headers(session_id=session, account_id=id),
         data={'from': question_range[0], 'to': question_range[1]},
     )
 

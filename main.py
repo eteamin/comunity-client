@@ -8,6 +8,7 @@ from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, Line
 from kivy.metrics import dp
 from kivy.graphics.texture import Texture
+from kivy.properties import ObjectProperty
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import AsyncImage, Image
@@ -20,7 +21,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.clock import Clock
-from kivy.utils import platform
+from kivy.utils import platform, get_color_from_hex
 from drawer import NavigationDrawer
 from request_handler import *
 from helpers import *
@@ -28,8 +29,10 @@ from helpers import *
 resps = Queue()
 
 me = None
+session = None
 user_id = None
 question_id = None
+texture = None
 tags = None
 EVENT_INTERVAL_RATE = 0.1
 progress_bar = ProgressBar(max=100)
@@ -64,7 +67,7 @@ class MainScreen(Screen):
         self.header = BoxLayout(orientation='horizontal', size_hint=(None, None),
                                 size=(Window.width, Window.height * .1))
         with self.header.canvas.before:
-            Color(0.298, 0.407, 0.843, 1)
+            Color(0, 0.517, 0.705, 1)
             self.header.rect = Rectangle(size=self.header.size, pos=self.header.pos)
         self.header.bind(pos=update_rect, size=update_rect)
         self.toggle_button = Image(
@@ -82,8 +85,8 @@ class MainScreen(Screen):
         self.body.bind(minimum_height=self.body.setter('height'))
 
         with self.body.canvas.before:
-            Color(0.945, 0.945, 0.945, 1)
-            self.body.rect = Rectangle(size=(Window.width, Window.height), pos=self.body.pos)
+            Color(1.0, 1.0, 1.0, 1)
+            self.body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=self.body.pos)
         self.body.bind(pos=update_rect, size=update_rect)
 
         self.event_scheduled = True
@@ -101,7 +104,7 @@ class MainScreen(Screen):
         Clock.schedule_once(
             partial(insert_progress_bar, Window)) if progress_bar not in self.children else None
         self.event = Clock.schedule_interval(partial(async_await_resp, self), EVENT_INTERVAL_RATE)
-        get_questions(resps, me)
+        get_questions(resps, me['id'], session)
 
     def on_touch_down(self, touch):
         if self.toggle_button.collide_point(*touch.pos):
@@ -111,7 +114,7 @@ class MainScreen(Screen):
         for q in resp['questions']:
             self.container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 5))
             with self.container.canvas.before:
-                Color(0, 0, 0, 0.7)
+                Color(0, 0, 0, 0.1)
                 Line(
                     points=[self.container.x, self.container.x, self.container.width / 1.03, self.container.x, 0, 0],
                     width=1,
@@ -121,28 +124,40 @@ class MainScreen(Screen):
             title = Label(
                 text='[ref=%s][b]%s[/b][/ref]' % (q['title'], q['title']),
                 markup=True,
-                pos_hint={'center_x': 0.45, 'center_y': 1},
-                color=(0, 0, 0, 1),
-                font_size=dp(14),
+                pos_hint={'center_x': 0.59, 'center_y': 1.25},
+                color=(0, 0.517, 0.705, 1),
+                font_size=dp(13),
                 underline=True,
                 halign='left',
                 valgin='middle',
             )
             title.bind(on_ref_press=partial(self.select_question, q['id']))
-            title.text_size = (self.container.size[0] / 2, self.container.size[1])
-            # title.on_touch_down()
+            title.text_size = (self.container.size[0] / 1.3, self.container.size[1])
             self.container.add_widget(title)
+
+            description = Label(
+                text='{} ...'.format(q['description'][:60]),
+                pos_hint={'center_x': 0.455, 'center_y': 0.95},
+                color=(0, 0, 0, 0.8),
+                font_size=dp(12),
+                halign='left',
+                valgin='middle',
+            )
+            description.text_size = (self.container.size[0] / 2, self.container.size[1])
+            # title.on_touch_down()
+            self.container.add_widget(description)
+
             self.container.add_widget(
                 Label(
                     text=str(len(q['votes'])),
-                    pos_hint={'center_x': 0.1, 'center_y': 0.65},
+                    pos_hint={'center_x': 0.14, 'center_y': 0.65},
                     color=(0, 0, 0, 1)
                 )
             )
             self.container.add_widget(
                 Label(
                     text='Votes' if len(q['votes']) > 1 else 'Vote',
-                    pos_hint={'center_x': 0.1, 'center_y': 0.55},
+                    pos_hint={'center_x': 0.14, 'center_y': 0.55},
                     font_size=dp(12),
                     color=(0, 0, 0, 1)
                 )
@@ -152,20 +167,28 @@ class MainScreen(Screen):
                     size_hint=(None, None),
                     size=(self.container.width / 5, self.container.height / 5),
                     source='vote.png',
-                    pos_hint={'center_x': 0.05, 'center_y': 0.65},
+                    pos_hint={'center_x': 0.05, 'center_y': 0.63},
+                )
+            )
+            self.container.add_widget(
+                Image(
+                    size_hint=(None, None),
+                    size=(self.container.width / 5, self.container.height / 5),
+                    source='view.png',
+                    pos_hint={'center_x': 0.05, 'center_y': 0.35},
                 )
             )
             self.container.add_widget(
                 Label(
                     text=str(len(q['views'])),
-                    pos_hint={'center_x': 0.1, 'center_y': 0.4},
+                    pos_hint={'center_x': 0.14, 'center_y': 0.4},
                     color=(0, 0, 0, 1)
                 )
             )
             self.container.add_widget(
                 Label(
                     text='Views' if len(q['views']) > 1 else 'View',
-                    pos_hint={'center_x': 0.1, 'center_y': 0.3},
+                    pos_hint={'center_x': 0.14, 'center_y': 0.3},
                     font_size=dp(12),
                     color=(0, 0, 0, 1)
                 )
@@ -173,25 +196,29 @@ class MainScreen(Screen):
 
             # Handle tags
             tags_container = BoxLayout(
+                spacing=3,
                 orientation='horizontal',
                 size_hint=(None, None),
                 size=(Window.width * .05, Window.height * .05),
-                pos_hint={'center_x': 0.2, 'center_y': 0.5}
+                pos_hint={'center_x': 0.23, 'center_y': 0.23},
             )
             for t in q['tags']:
                 tag = Button(
                     text=t['name'],
                     size_hint=(None, None),
-                    size=(Window.width / 10, Window.height / 20),
+                    size=(Window.width / 7, Window.height / 28),
                     font_size=dp(10),
+                    color=(0, 0.517, 0.705, 1),
+                    background_normal='',
+                    background_color=get_color_from_hex('#e1ecf4'),
                 )
                 # tag.text_size = tag.size
                 tags_container.add_widget(tag)
-                self.container.add_widget(tags_container)
+            self.container.add_widget(tags_container)
             creation_date = Label(
-                text=tell_time_ago(q['creation_date']),
-                pos_hint={'center_x': 0.7, 'center_y': 0.1},
-                font_size=dp(12),
+                text='asked {}'.format(tell_time_ago(q['creation_date'])),
+                pos_hint={'center_x': 0.8, 'center_y': 0.5},
+                font_size=dp(10),
                 halign='left',
                 color=(0, 0, 0, 1)
             )
@@ -199,18 +226,32 @@ class MainScreen(Screen):
             self.container.add_widget(creation_date)
             username = Label(
                 text="[ref=%s]%s[/ref]" % (q['accounts']['username'], q['accounts']['username']), markup=True,
-                pos_hint={'center_x': 0.9, 'center_y': 0.1},
-                font_size=dp(15),
-                color=(0, 0, 0, 0.9)
+                pos_hint={'center_x': 0.93, 'center_y': 0.57},
+                font_size=dp(11),
+                color=(0, 0.517, 0.705, 1),
+                halign='left',
+                valgin='middle',
             )
+            username.text_size = username.size
             username.bind(on_ref_press=partial(self.select_user, q['accounts']['id']))
             self.container.add_widget(username)
+
+            rep = Label(
+                text=str(q['accounts']['reputation']),
+                pos_hint={'center_x': 0.85, 'center_y': 0.19},
+                font_size=dp(10),
+                color=(0, 0, 0, 1),
+            )
+            self.container.add_widget(rep)
+
             image = q['accounts']['image']
             user_image = AsyncImage(
-                source='back.png' if not image else image,
-                pos_hint={'center_x': 0.9, 'center_y': 0.39},
+                source='back.png' if not image else 'http://192.168.1.101:8080/storage/images/image-{}.jpg'.format(
+                    image.get('key')
+                ),
+                pos_hint={'center_x': 0.75, 'center_y': 0.25},
                 size_hint=(None, None),
-                size=(Window.width / 8, Window.height / 8)
+                size=(Window.width / 7, Window.height / 7),
             )
             self.container.add_widget(user_image)
             self.body.add_widget(self.container)
@@ -528,16 +569,11 @@ class SignUp(Screen):
         super(SignUp, self).__init__()
         root = BoxLayout(orientation='vertical')
 
-        self.texture = Texture.create(size=texture_size, colorfmt="rgb")
-        pixels = bytes([int(v * 255) for v in (0.0, 0.0, 0.0)])
-        buf = ''.join(pixels)
-        self.texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
-
         body = GridLayout(cols=1, spacing=2, size_hint=(1, 1))
         body.bind(minimum_height=body.setter('height'))
         with body.canvas.before:
             self.canvas_size = canvas_size
-            self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=self.texture)
+            self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=texture)
         self.canvas_event = Clock.schedule_interval(partial(update_canvas, self.rect), EVENT_INTERVAL_RATE)
         container = RelativeLayout()
         title = Label(
@@ -668,6 +704,7 @@ class SignUp(Screen):
         if not self.event_scheduled:
             if self._register():
                 self.event_scheduled = True
+                Clock.unschedule(self.canvas_event)
                 Clock.schedule_once(partial(insert_progress_bar)) if progress_bar not in self.children else None
                 self.event = Clock.schedule_interval(partial(async_await_resp, self), EVENT_INTERVAL_RATE)
 
@@ -710,18 +747,12 @@ class SignIn(Screen):
         super(SignIn, self).__init__()
         root = BoxLayout(orientation='vertical')
 
-        self.texture = Texture.create(size=texture_size, colorfmt="rgb")
-        pixels = bytes([int(v * 255) for v in (0.0, 0.0, 0.0)])
-        buf = ''.join(pixels)
-        self.texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
-        self.canvas_move_direction = 'to_left'
-
         body = GridLayout(cols=1, spacing=2, size_hint=(1, 1))
         body.bind(minimum_height=body.setter('height'))
         with body.canvas.before:
             self.canvas_size = canvas_size
-            self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=self.texture)
-            self.event = Clock.schedule_interval(partial(update_canvas, self.rect), EVENT_INTERVAL_RATE)
+            self.rect = Rectangle(pos=self.pos, size=self.canvas_size, texture=texture)
+            self.canvas_event = Clock.schedule_interval(partial(update_canvas, self.rect), EVENT_INTERVAL_RATE)
 
         container = RelativeLayout()
         title = Label(
@@ -795,6 +826,7 @@ class SignIn(Screen):
         if not self.event_scheduled:
             if self._sign_in():
                 self.event_scheduled = True
+                Clock.unschedule(self.canvas_event)
                 Clock.schedule_once(partial(insert_progress_bar, self)) if progress_bar not in self.children else None
                 self.event = Clock.schedule_interval(partial(async_await_resp, self), EVENT_INTERVAL_RATE)
 
@@ -910,7 +942,7 @@ class SidePanel(Screen):
             container = RelativeLayout()
 
             profile_picture = AsyncImage(
-                source='back.png' if not me['image'] else me['image'],
+                source='back.png',
                 pos_hint={'center_x': 0.5, 'center_y': 0.9},
                 size_hint=(None, None),
                 size=(Window.width / 5, Window.height / 5)
@@ -1031,15 +1063,31 @@ def read_config():
 
 def _reload_config():
     global me
-    me = json.loads(read_config())['user']
+    global session
+    data = json.loads(read_config())
+    me = data['user']
+    session = data['session']
+
+
+def make_texture():
+    global texture
+    texture = Texture.create(size=texture_size, colorfmt="rgb")
+    pixels = bytes([int(v * 255) for v in (0.0, 0.0, 0.0)])
+    buf = ''.join(pixels)
+    texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
+    return texture
 
 
 class CommunityApp(App):
     def on_start(self):
+        global texture
+        texture = make_texture()
         global me
+        global session
         user_info = read_config()
         if user_info:
             me = json.loads(user_info)['user']
+            session = json.loads(user_info)['session']
             if me and 'id' in me:
                 switch_to_screen(None, MainScreen, 'main')
         else:
@@ -1056,8 +1104,16 @@ class CommunityApp(App):
 
     def build(self):
         if platform == 'android':
-            import android
-            android.start_service(title='hello', description='nth', arg='nth')
+            from jnius import autoclass
+            activity = autoclass('org.kivy.android.PythonActivity').mActivity
+            activity.removeLoadingScreen()
+            service = autoclass('org.test.community.ServiceMyservice')
+            print 'service declared'
+            mActivity = autoclass('org.kivy.android.PythonActivity').mActivity
+            print 'mActivity declared'
+            argument = ''
+            service.start(mActivity, argument)
+            print 'service started'
         return screen_manager
 
 

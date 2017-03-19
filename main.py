@@ -27,6 +27,8 @@ from request_handler import *
 from helpers import *
 
 resps = Queue()
+answers_resp = Queue()  # Specifically for async awaiting answers alongside question
+comments_resp = Queue()  # Specifically for async awaiting comments alongside questions and answers
 
 me = None
 session = None
@@ -455,7 +457,13 @@ class QuestionScreen(Screen):
 
             Clock.schedule_once(
                 partial(insert_progress_bar, Window)) if progress_bar not in self.children else None
-            self.event = Clock.schedule_interval(partial(async_await_resp, self, self.on_resp_ready), EVENT_INTERVAL_RATE)
+            self.event = Clock.schedule_interval(
+                partial(async_await_resp, self, self.on_question_resp_ready), EVENT_INTERVAL_RATE
+            )
+            self.question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
+            self.answers_container = GridLayout(cols=1, spacing=2, size_hint_y=None)
+            self.body.add_widget(self.question_container)
+            self.body.add_widget(self.answers_container)
             get_question(resps, question_id, me['id'], session)
 
             scroll_view.add_widget(self.body)
@@ -469,22 +477,22 @@ class QuestionScreen(Screen):
             navigation_drawer.add_widget(box_container)
             Window.add_widget(navigation_drawer)
 
-    def on_resp_ready(self, resp):
+    def on_question_resp_ready(self, resp):
         _question = resp['post']
-        question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
         title = Label(
             text=_question['title'],
             halign='left',
             markup=True,
             pos_hint={'center_x': 0.4, 'center_y': 0.8}
         )
-        question_container.add_widget(title)
+        self.question_container.add_widget(title)
         # question_container.add_widget(Label(text=question['votes'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
         # container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
-        question_container.add_widget(
+        self.question_container.add_widget(
             Label(text=_question['creation_date'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
-        self.body.add_widget(question_container)
 
+    def on_answers_resp_ready(self, resp):
+        pass
         # for a in get_children(resp['id']):
         #     container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 4))
         #     container.add_widget(Label(text=a['description']))
@@ -492,32 +500,32 @@ class QuestionScreen(Screen):
         #         pass
         #         self.body.add_widget(container)
 
-        self.answer_input = TextInput(
-            hint_text='Write your answer',
-            size_hint=(None, None),
-            size=(Window.width, Window.height / 2),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5},
-        )
-        self.answer_input.bind(text=partial(self.update_input_text, 'answer'))
-        self.body.add_widget(self.answer_input)
-
-        submit = Button(
-            text='Submit',
-            size_hint=(None, None),
-            size=(Window.width, Window.height / 20),
-            pos_hint={'center_x': 0.5, 'center_y': 0.05},
-            background_normal='',
-            background_color=(.28, .40, .28, 1)
-        )
-        submit.bind(on_press=self.submit_answer)
-        self.body.add_widget(submit)
-
-    # noinspection PyUnusedLocal
-    def submit_answer(self, *args):
-        resp = post_answer(self.answer_text, me['id'], question_id)
-        if resp:
-            switch_to_screen(QuestionScreen)
-            # TODO: implement exception handling
+    #     self.answer_input = TextInput(
+    #         hint_text='Write your answer',
+    #         size_hint=(None, None),
+    #         size=(Window.width, Window.height / 2),
+    #         pos_hint={'center_x': 0.5, 'center_y': 0.5},
+    #     )
+    #     self.answer_input.bind(text=partial(self.update_input_text, 'answer'))
+    #     self.body.add_widget(self.answer_input)
+    #
+    #     submit = Button(
+    #         text='Submit',
+    #         size_hint=(None, None),
+    #         size=(Window.width, Window.height / 20),
+    #         pos_hint={'center_x': 0.5, 'center_y': 0.05},
+    #         background_normal='',
+    #         background_color=(.28, .40, .28, 1)
+    #     )
+    #     submit.bind(on_press=self.submit_answer)
+    #     self.body.add_widget(submit)
+    #
+    # # noinspection PyUnusedLocal
+    # def submit_answer(self, *args):
+    #     resp = post_answer(self.answer_text, me['id'], question_id)
+    #     if resp:
+    #         switch_to_screen(QuestionScreen)
+    #         # TODO: implement exception handling
 
     def update_input_text(self, *args):
         referer = args[0]

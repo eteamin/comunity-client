@@ -3,7 +3,7 @@ from base64 import b64encode
 from pyDes import triple_des
 
 
-server_url = 'http://illc.ir'
+server_url = 'http://192.168.1.101:8080'
 auth_secret_key = 'b5ad2d8123e8809bba576cfa'
 auth_message = 'I am authorized'
 question_range = 0, 20

@@ -14,9 +14,13 @@ def get_questions(resps, id, session):
     )
 
 
-def get_question(question_id, account_id):
-    resp = get('%s/posts/%s' % (server_url, question_id), headers=make_headers(account_id))
-    return resp.json()['post'] if resp.status_code == 200 else None
+def get_question(resps, question_id, account_id, session):
+    RequestWrapper(
+        resps,
+        'get',
+        '%s/posts/%s' % (server_url, question_id),
+        headers=make_headers(session_id=session, account_id=account_id),
+    )
 
 
 def get_children(parent_id):

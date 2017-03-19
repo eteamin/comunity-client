@@ -14,6 +14,10 @@ class RequestWrapper:
         self.do_in_background.daemon = True
         self.do_in_background.start()
 
+
+
+
+
     def _make_request(self, *args):
-        self.resp = request(self.method, self.url, headers=self.headers, data=self.data, json=self.json).json()
-        args[0].put(self.resp)  # resps.put(self.resp)
+        self.resp = request(self.method, self.url, headers=self.headers, data=self.data, json=self.json)
+        args[0].put(self.resp.json())  # resps.put(self.resp)

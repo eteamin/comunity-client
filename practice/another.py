@@ -1,22 +1,27 @@
+from kivy.uix.boxlayout import BoxLayout
+from kivy.lang import Builder
 from kivy.app import App
-from kivy.uix.widget import Widget
-from kivy.uix.button import Button
-from kivy.graphics import BorderImage
+
+
+Builder.load_string("""
+<MyListView>:
+    ListView:
+        Button:
+            text: "Close"
+            on_release: app.stop()
+""")
+
+
+class MyListView(BoxLayout):
+    features = ["A", "B", "C"]
 
 
 class MyApp(App):
     def build(self):
-        root = Widget()
-        b = Button(center=(200, 200))
-        root.add_widget(b)
-        with b.canvas.before:
-            BorderImage(
-                size=(b.width, b.height),
-                pos=(b.x, b.y),
-                border=(10, 10, 10, 10),
-                source='home.png')
+        return MyListView()
 
-        return root
+    def on_stop(self):
+        return True
 
-
-MyApp().run()
+if __name__ == '__main__':
+    MyApp().run()

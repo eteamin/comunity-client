@@ -1,14 +1,13 @@
 from functools import partial
-from os import path, environ
+from os import path
 import json
 from Queue import Queue, Empty
-# from jnius import autoclass
+
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, Line
 from kivy.metrics import dp
 from kivy.graphics.texture import Texture
-from kivy.properties import ObjectProperty
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import AsyncImage, Image
@@ -22,6 +21,7 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.clock import Clock
 from kivy.utils import platform, get_color_from_hex
+
 from drawer import NavigationDrawer
 from request_handler import *
 from helpers import *
@@ -103,7 +103,7 @@ class MainScreen(Screen):
         Window.add_widget(self.navigation_drawer)
         Clock.schedule_once(
             partial(insert_progress_bar, Window)) if progress_bar not in self.children else None
-        self.event = Clock.schedule_interval(partial(async_await_resp, self), EVENT_INTERVAL_RATE)
+        self.event = Clock.schedule_interval(partial(async_await_resp, self, self.on_resp_ready), EVENT_INTERVAL_RATE)
         get_questions(resps, me['id'], session)
 
     def on_touch_down(self, touch):
@@ -434,82 +434,32 @@ class QuestionScreen(Screen):
         if question_id:
             box_container = BoxLayout(orientation='vertical')
 
-            header = GridLayout(cols=1, size_hint=(1, None), size=(Window.width, Window.height * .05))
+            header = BoxLayout(
+                orientation='horizontal', size_hint=(None, None),
+                size=(Window.width, Window.height * .1)
+            )
             with header.canvas.before:
-                Color(.28, .40, .28, .8)
+                Color(0, 0.517, 0.705, 1)
                 header.rect = Rectangle(size=header.size, pos=header.pos)
             header.bind(pos=update_rect, size=update_rect)
             header.add_widget(Label(text='Question'))
 
-            nav_bar = GridLayout(cols=3, size_hint=(1, None), size=(Window.width, Window.height * .05))
-            with nav_bar.canvas.before:
-                Color(.9, .9, .9, .8)
-                nav_bar.rect = Rectangle(size=nav_bar.size, pos=nav_bar.pos)
-            nav_bar.bind(pos=update_rect, size=update_rect)
-
-            ask_question_label = Label(text='[ref=Ask a Question]Ask a Question[/ref]', markup=True)
-            ask_question_label.bind(on_ref_press=partial(switch_to_screen, NewQuestionScreen, 'new_question'))
-            nav_bar.add_widget(ask_question_label)
-            need_help_label = Label(text='[ref=Need Help?]Need Help?[/ref]', markup=True)
-            need_help_label.bind(on_ref_press=partial(switch_to_screen, MainScreen, 'main'))
-            nav_bar.add_widget(need_help_label)
-
             scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
-            body = GridLayout(cols=1, spacing=2, size_hint_y=None)
-            body.bind(minimum_height=body.setter('height'))
+            self.body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+            self.body.bind(minimum_height=self.body.setter('height'))
 
-            with body.canvas.before:
+            with self.body.canvas.before:
                 Color(.65, .72, .66, .8)
-                body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=body.pos)
-            body.bind(pos=update_rect, size=update_rect)
+                self.body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=self.body.pos)
+                self.body.bind(pos=update_rect, size=update_rect)
 
-            question = get_question(question_id, me['id'])
+            Clock.schedule_once(
+                partial(insert_progress_bar, Window)) if progress_bar not in self.children else None
+            self.event = Clock.schedule_interval(partial(async_await_resp, self, self.on_resp_ready), EVENT_INTERVAL_RATE)
+            get_question(resps, question_id, me['id'], session)
 
-            question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
-            title = Label(
-                text=question['title'],
-                halign='left',
-                markup=True,
-                pos_hint={'center_x': 0.4, 'center_y': 0.8}
-            )
-            question_container.add_widget(title)
-            # question_container.add_widget(Label(text=question['votes'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
-            # container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
-            question_container.add_widget(
-                Label(text=question['creation_date'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
-            body.add_widget(question_container)
-
-            for a in get_children(question['id']):
-                container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 4))
-                container.add_widget(Label(text=a['description']))
-                for c in get_children(a['id']):
-                    pass
-                body.add_widget(container)
-
-            self.answer_input = TextInput(
-                hint_text='Write your answer',
-                size_hint=(None, None),
-                size=(Window.width, Window.height / 2),
-                pos_hint={'center_x': 0.5, 'center_y': 0.5},
-            )
-            self.answer_input.bind(text=partial(self.update_input_text, 'answer'))
-            body.add_widget(self.answer_input)
-
-            submit = Button(
-                text='Submit',
-                size_hint=(None, None),
-                size=(Window.width, Window.height / 20),
-                pos_hint={'center_x': 0.5, 'center_y': 0.05},
-                background_normal='',
-                background_color=(.28, .40, .28, 1)
-            )
-            submit.bind(on_press=self.submit_answer)
-            body.add_widget(submit)
-
-            scroll_view.add_widget(body)
-
+            scroll_view.add_widget(self.body)
             box_container.add_widget(header)
-            box_container.add_widget(nav_bar)
             box_container.add_widget(scroll_view)
 
             navigation_drawer = NavigationDrawer()
@@ -518,6 +468,49 @@ class QuestionScreen(Screen):
             navigation_drawer.add_widget(side_panel)
             navigation_drawer.add_widget(box_container)
             Window.add_widget(navigation_drawer)
+
+    def on_resp_ready(self, resp):
+        _question = resp['post']
+        question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
+        title = Label(
+            text=_question['title'],
+            halign='left',
+            markup=True,
+            pos_hint={'center_x': 0.4, 'center_y': 0.8}
+        )
+        question_container.add_widget(title)
+        # question_container.add_widget(Label(text=question['votes'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
+        # container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
+        question_container.add_widget(
+            Label(text=_question['creation_date'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
+        self.body.add_widget(question_container)
+
+        # for a in get_children(resp['id']):
+        #     container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 4))
+        #     container.add_widget(Label(text=a['description']))
+        #     for c in get_children(a['id']):
+        #         pass
+        #         self.body.add_widget(container)
+
+        self.answer_input = TextInput(
+            hint_text='Write your answer',
+            size_hint=(None, None),
+            size=(Window.width, Window.height / 2),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+        )
+        self.answer_input.bind(text=partial(self.update_input_text, 'answer'))
+        self.body.add_widget(self.answer_input)
+
+        submit = Button(
+            text='Submit',
+            size_hint=(None, None),
+            size=(Window.width, Window.height / 20),
+            pos_hint={'center_x': 0.5, 'center_y': 0.05},
+            background_normal='',
+            background_color=(.28, .40, .28, 1)
+        )
+        submit.bind(on_press=self.submit_answer)
+        self.body.add_widget(submit)
 
     # noinspection PyUnusedLocal
     def submit_answer(self, *args):
@@ -706,7 +699,9 @@ class SignUp(Screen):
                 self.event_scheduled = True
                 Clock.unschedule(self.canvas_event)
                 Clock.schedule_once(partial(insert_progress_bar)) if progress_bar not in self.children else None
-                self.event = Clock.schedule_interval(partial(async_await_resp, self), EVENT_INTERVAL_RATE)
+                self.event = Clock.schedule_interval(
+                    partial(async_await_resp, self, self.on_resp_ready), EVENT_INTERVAL_RATE
+                )
 
     # noinspection PyUnusedLocal
     def _register(self, *args):
@@ -828,7 +823,9 @@ class SignIn(Screen):
                 self.event_scheduled = True
                 Clock.unschedule(self.canvas_event)
                 Clock.schedule_once(partial(insert_progress_bar, self)) if progress_bar not in self.children else None
-                self.event = Clock.schedule_interval(partial(async_await_resp, self), EVENT_INTERVAL_RATE)
+                self.event = Clock.schedule_interval(
+                    partial(async_await_resp, self, self.on_resp_ready), EVENT_INTERVAL_RATE
+                )
 
     # noinspection PyUnusedLocal
     def _sign_in(self, *args):
@@ -1030,14 +1027,14 @@ def insert_progress_bar(*args):
 
 
 # noinspection PyUnusedLocal
-def async_await_resp(widget, dt):
+def async_await_resp(widget, callback, dt):
     try:
         resp = resps.get(timeout=EVENT_INTERVAL_RATE / 2)
         reset(widget)
         if 'detail' in resp:  # Means an error occurred
             Alert('Ops!', resp['detail'])
         else:
-            widget.on_resp_ready(resp)
+            callback(resp)
     except Empty as QueueEmpty:
         progress_bar.value += 2
 
@@ -1094,10 +1091,10 @@ class CommunityApp(App):
             switch_to_screen(None, SignUp, 'sign_up')
 
     def on_pause(self):
-        return True
+        self.on_stop()
 
     def on_stop(self):
-        pass
+        return True
 
     def on_resume(self):
         pass
@@ -1108,12 +1105,8 @@ class CommunityApp(App):
             activity = autoclass('org.kivy.android.PythonActivity').mActivity
             activity.removeLoadingScreen()
             service = autoclass('org.test.community.ServiceMyservice')
-            print 'service declared'
-            mActivity = autoclass('org.kivy.android.PythonActivity').mActivity
-            print 'mActivity declared'
             argument = ''
-            service.start(mActivity, argument)
-            print 'service started'
+            service.start(activity, argument)
         return screen_manager
 
 

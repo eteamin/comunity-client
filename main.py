@@ -1,3 +1,4 @@
+from __future__ import division
 from functools import partial
 from os import path
 import json
@@ -14,6 +15,7 @@ from kivy.uix.image import AsyncImage, Image
 from kivy.uix.popup import Popup
 from kivy.uix.button import Button
 from kivy.uix.label import Label
+from kivy.uix.stacklayout import StackLayout
 from kivy.uix.textinput import TextInput
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
@@ -27,8 +29,7 @@ from request_handler import *
 from helpers import *
 
 resps = Queue()
-answers_resp = Queue()  # Specifically for async awaiting answers alongside question
-comments_resp = Queue()  # Specifically for async awaiting comments alongside questions and answers
+answers_resp = Queue()  # Specifically for async awaiting answers and its comments alongside question
 
 me = None
 session = None
@@ -121,12 +122,12 @@ class MainScreen(Screen):
                     points=[self.container.x, self.container.x, self.container.width / 1.03, self.container.x, 0, 0],
                     width=1,
                 )
-                Line(points=[Window.width / 5.5, 10, Window.width / 5.5, self.container.height - 10], width=1)
+                Line(points=[Window.width / 10, 10, Window.width / 10, self.container.height - 10], width=1)
 
             title = Label(
                 text='[ref=%s][b]%s[/b][/ref]' % (q['title'], q['title']),
                 markup=True,
-                pos_hint={'center_x': 0.59, 'center_y': 1.25},
+                pos_hint={'center_x': 0.51, 'center_y': 1.25},
                 color=(0, 0.517, 0.705, 1),
                 font_size=dp(13),
                 underline=True,
@@ -139,12 +140,12 @@ class MainScreen(Screen):
 
             description = Label(
                 text='{} ...'.format(q['description'][:60]),
-                pos_hint={'center_x': 0.455, 'center_y': 0.95},
+                pos_hint={'center_x': 0.375, 'center_y': 1.2},
                 color=(0, 0, 0, 0.8),
                 font_size=dp(12),
                 halign='left',
-                valgin='middle',
             )
+            description.valign = 'top'
             description.text_size = (self.container.size[0] / 2, self.container.size[1])
             # title.on_touch_down()
             self.container.add_widget(description)
@@ -152,15 +153,7 @@ class MainScreen(Screen):
             self.container.add_widget(
                 Label(
                     text=str(len(q['votes'])),
-                    pos_hint={'center_x': 0.14, 'center_y': 0.65},
-                    color=(0, 0, 0, 1)
-                )
-            )
-            self.container.add_widget(
-                Label(
-                    text='Votes' if len(q['votes']) > 1 else 'Vote',
-                    pos_hint={'center_x': 0.14, 'center_y': 0.55},
-                    font_size=dp(12),
+                    pos_hint={'center_x': 0.05, 'center_y': 0.55},
                     color=(0, 0, 0, 1)
                 )
             )
@@ -169,7 +162,7 @@ class MainScreen(Screen):
                     size_hint=(None, None),
                     size=(self.container.width / 5, self.container.height / 5),
                     source='vote.png',
-                    pos_hint={'center_x': 0.05, 'center_y': 0.63},
+                    pos_hint={'center_x': 0.05, 'center_y': 0.73},
                 )
             )
             self.container.add_widget(
@@ -177,21 +170,13 @@ class MainScreen(Screen):
                     size_hint=(None, None),
                     size=(self.container.width / 5, self.container.height / 5),
                     source='view.png',
-                    pos_hint={'center_x': 0.05, 'center_y': 0.35},
+                    pos_hint={'center_x': 0.05, 'center_y': 0.40},
                 )
             )
             self.container.add_widget(
                 Label(
                     text=str(len(q['views'])),
-                    pos_hint={'center_x': 0.14, 'center_y': 0.4},
-                    color=(0, 0, 0, 1)
-                )
-            )
-            self.container.add_widget(
-                Label(
-                    text='Views' if len(q['views']) > 1 else 'View',
-                    pos_hint={'center_x': 0.14, 'center_y': 0.3},
-                    font_size=dp(12),
+                    pos_hint={'center_x': 0.05, 'center_y': 0.25},
                     color=(0, 0, 0, 1)
                 )
             )
@@ -202,7 +187,7 @@ class MainScreen(Screen):
                 orientation='horizontal',
                 size_hint=(None, None),
                 size=(Window.width * .05, Window.height * .05),
-                pos_hint={'center_x': 0.23, 'center_y': 0.23},
+                pos_hint={'center_x': 0.15, 'center_y': 0.23},
             )
             for t in q['tags']:
                 tag = Button(
@@ -248,8 +233,8 @@ class MainScreen(Screen):
 
             image = q['accounts']['image']
             user_image = AsyncImage(
-                source='back.png' if not image else 'http://192.168.1.101:8080/storage/images/image-{}.jpg'.format(
-                    image.get('key')
+                source='back.png' if not image else '{}/storage/images/image-{}.jpg'.format(
+                    server_url, image.get('key')
                 ),
                 pos_hint={'center_x': 0.75, 'center_y': 0.25},
                 size_hint=(None, None),
@@ -392,12 +377,13 @@ class NewQuestionScreen(Screen):
     def post_question(self, *args):
         tags = normalize_tags(self.tags_input_text)
         resp = post_question(self.title_input_text, self.question_input_text, int(me['id']), tags=tags)
-        if resp:
-            screen_manager.switch_to(MainScreen())
-            # TODO: Implement handling of possible exceptions
+        # if resp:
+        #     screen_manager.switch_to(MainScreen())
+        #     # TODO: Implement handling of possible exceptions
 
     # noinspection PyUnusedLocal
     def on_tag_selection(self, *args):
+        global tags
         content = BoxLayout()
         if tags:
             for t in tags:
@@ -451,7 +437,7 @@ class QuestionScreen(Screen):
             self.body.bind(minimum_height=self.body.setter('height'))
 
             with self.body.canvas.before:
-                Color(.65, .72, .66, .8)
+                Color(1.0, 1.0, 1.0, 1)
                 self.body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=self.body.pos)
                 self.body.bind(pos=update_rect, size=update_rect)
 
@@ -478,18 +464,67 @@ class QuestionScreen(Screen):
             Window.add_widget(navigation_drawer)
 
     def on_question_resp_ready(self, resp):
+        with self.question_container.canvas.before:
+            Color(0, 0, 0, 0.1)
+            Line(
+                points=[
+                    self.question_container.width / 50,
+                    self.question_container.y / 0.7,
+                    self.question_container.width / 1.3,
+                    self.question_container.y / 0.7,
+                    self.question_container.width / 50,
+                    self.question_container.y / 0.7,
+                ],
+                width=1,
+            )
         _question = resp['post']
         title = Label(
             text=_question['title'],
-            halign='left',
             markup=True,
-            pos_hint={'center_x': 0.4, 'center_y': 0.8}
+            pos_hint={'center_x': 0.36, 'center_y': 1.3},
+            color=(0, 0, 0, 1),
+            font_size=dp(17),
+            halign='left',
+            valgin='middle',
         )
         self.question_container.add_widget(title)
+        title.text_size = (self.question_container.size[0] / 1.5, self.question_container.size[1])
+        description = Label(
+            text=_question['description'],
+            pos_hint={'center_x': 0.4, 'center_y': 0.17},
+            color=(0, 0, 0, 0.8),
+            font_size=dp(15),
+            halign='justify',
+        )
+        description.valign = 'top'  #  What the hell Kivy!
+        description.text_size = (self.question_container.size[0] / 1.5, self.question_container.size[1])
+        self.question_container.add_widget(description)
+
+        # Handle tags
+        tags_container = BoxLayout(
+            spacing=3,
+            orientation='horizontal',
+            size_hint=(None, None),
+            size=(Window.width * .05, Window.height * .05),
+            pos_hint={'center_x': 0.09, 'center_y': self.question_container.size[1] / 290},
+        )
+        for t in _question['tags']:
+            tag = Button(
+                text=t['name'],
+                size_hint=(None, None),
+                size=(Window.width / 7, Window.height / 28),
+                font_size=dp(10),
+                color=(0, 0.517, 0.705, 1),
+                background_normal='',
+                background_color=get_color_from_hex('#e1ecf4'),
+            )
+            # tag.text_size = tag.size
+            tags_container.add_widget(tag)
+        # self.question_container.add_widget(tags_container)
         # question_container.add_widget(Label(text=question['votes'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
         # container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
-        self.question_container.add_widget(
-            Label(text=_question['creation_date'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
+        # self.question_container.add_widget(
+        #     Label(text=_question['creation_date'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
 
     def on_answers_resp_ready(self, resp):
         pass
@@ -1099,7 +1134,7 @@ class CommunityApp(App):
             switch_to_screen(None, SignUp, 'sign_up')
 
     def on_pause(self):
-        self.on_stop()
+        return True
 
     def on_stop(self):
         return True

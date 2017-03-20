@@ -4,6 +4,7 @@ from normalize import normalize_tags
 from timedelta import tell_time_ago
 from alert import Alert
 from overscroll import OverScrollEffect
+from variables import server_url
 
 
 def find_step(size):

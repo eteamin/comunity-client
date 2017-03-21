@@ -8,7 +8,10 @@ from variables import server_url
 
 
 def find_step(size):
-    return [i for i in range(20, 30) if size % i == 0][0]
+    try:
+        return [i for i in range(15, 40) if size % i == 0][0]
+    except IndexError:
+        return 15
 
 
 def valid_email(email):

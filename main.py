@@ -140,12 +140,12 @@ class MainScreen(Screen):
 
             description = Label(
                 text='{} ...'.format(q['description'][:60]),
-                pos_hint={'center_x': 0.375, 'center_y': 1.2},
+                pos_hint={'center_x': 0.375, 'center_y': 1},
                 color=(0, 0, 0, 0.8),
                 font_size=dp(12),
                 halign='left',
             )
-            description.valign = 'top'
+            print description.pos_hint
             description.text_size = (self.container.size[0] / 2, self.container.size[1])
             # title.on_touch_down()
             self.container.add_widget(description)
@@ -161,7 +161,7 @@ class MainScreen(Screen):
                 Image(
                     size_hint=(None, None),
                     size=(self.container.width / 5, self.container.height / 5),
-                    source='vote.png',
+                    source='up.png',
                     pos_hint={'center_x': 0.05, 'center_y': 0.73},
                 )
             )
@@ -204,12 +204,12 @@ class MainScreen(Screen):
             self.container.add_widget(tags_container)
             creation_date = Label(
                 text='asked {}'.format(tell_time_ago(q['creation_date'])),
-                pos_hint={'center_x': 0.8, 'center_y': 0.5},
+                pos_hint={'center_x': 0.94, 'center_y': 0.97},
                 font_size=dp(10),
                 halign='left',
                 color=(0, 0, 0, 1)
             )
-            # creation_date.text_size = creation_date.size
+            creation_date.text_size = (self.container.size[0] / 2, self.container.size[1])
             self.container.add_widget(creation_date)
             username = Label(
                 text="[ref=%s]%s[/ref]" % (q['accounts']['username'], q['accounts']['username']), markup=True,
@@ -233,7 +233,7 @@ class MainScreen(Screen):
 
             image = q['accounts']['image']
             user_image = AsyncImage(
-                source='back.png' if not image else '{}/storage/images/image-{}.jpg'.format(
+                source='default.jpg' if not image else '{}/storage/images/image-{}.jpg'.format(
                     server_url, image.get('key')
                 ),
                 pos_hint={'center_x': 0.75, 'center_y': 0.25},
@@ -446,7 +446,7 @@ class QuestionScreen(Screen):
             self.event = Clock.schedule_interval(
                 partial(async_await_resp, self, self.on_question_resp_ready), EVENT_INTERVAL_RATE
             )
-            self.question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 3))
+            self.question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height))
             self.answers_container = GridLayout(cols=1, spacing=2, size_hint_y=None)
             self.body.add_widget(self.question_container)
             self.body.add_widget(self.answers_container)
@@ -468,12 +468,12 @@ class QuestionScreen(Screen):
             Color(0, 0, 0, 0.1)
             Line(
                 points=[
-                    self.question_container.width / 50,
-                    self.question_container.y / 0.7,
+                    self.question_container.width / 30,
+                    self.question_container.y / 0.4,
                     self.question_container.width / 1.3,
-                    self.question_container.y / 0.7,
-                    self.question_container.width / 50,
-                    self.question_container.y / 0.7,
+                    self.question_container.y / 0.4,
+                    self.question_container.width / 30,
+                    self.question_container.y / 0.4,
                 ],
                 width=1,
             )
@@ -481,7 +481,7 @@ class QuestionScreen(Screen):
         title = Label(
             text=_question['title'],
             markup=True,
-            pos_hint={'center_x': 0.36, 'center_y': 1.3},
+            pos_hint={'center_x': 0.36, 'center_y': 1.4},
             color=(0, 0, 0, 1),
             font_size=dp(17),
             halign='left',
@@ -491,12 +491,12 @@ class QuestionScreen(Screen):
         title.text_size = (self.question_container.size[0] / 1.5, self.question_container.size[1])
         description = Label(
             text=_question['description'],
-            pos_hint={'center_x': 0.4, 'center_y': 0.17},
+            pos_hint={'center_x': 0.4, 'center_y': 0.29},
             color=(0, 0, 0, 0.8),
             font_size=dp(15),
             halign='justify',
         )
-        description.valign = 'top'  #  What the hell Kivy!
+        description.valign = 'top'
         description.text_size = (self.question_container.size[0] / 1.5, self.question_container.size[1])
         self.question_container.add_widget(description)
 
@@ -506,8 +506,11 @@ class QuestionScreen(Screen):
             orientation='horizontal',
             size_hint=(None, None),
             size=(Window.width * .05, Window.height * .05),
-            pos_hint={'center_x': 0.09, 'center_y': self.question_container.size[1] / 290},
+            pos_hint={'center_x': 0.09, 'center_y': 0},
         )
+        words = len(description.text)
+        tags_container.pos_hint['center_y'] = -words / 1000 if words > 500 else words / 2400
+        print tags_container.pos_hint
         for t in _question['tags']:
             tag = Button(
                 text=t['name'],
@@ -520,11 +523,24 @@ class QuestionScreen(Screen):
             )
             # tag.text_size = tag.size
             tags_container.add_widget(tag)
-        # self.question_container.add_widget(tags_container)
+        self.question_container.add_widget(tags_container)
         # question_container.add_widget(Label(text=question['votes'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
-        # container.add_widget(Label(text=q['account']['display_name'], pos_hint={'center_x': 0.8, 'center_y': 0.2}))
-        # self.question_container.add_widget(
-        #     Label(text=_question['creation_date'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
+        self.question_container.add_widget(
+            Label(
+                text=_question['accounts']['username'],
+                pos_hint={'center_x': 0.7, 'center_y': 0.4},
+                font_size=dp(15),
+                color=(0, 0.517, 0.705, 1)
+            )
+        )
+        self.question_container.add_widget(
+            Label(
+                text=_question['creation_date'],
+                pos_hint={'center_x': 0.7, 'center_y': 0.1},
+                font_size=dp(15),
+                color=(0, 0.517, 0.705, 1)
+            )
+        )
 
     def on_answers_resp_ready(self, resp):
         pass

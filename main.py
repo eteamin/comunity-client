@@ -1,6 +1,7 @@
 from __future__ import division
 from functools import partial
 from os import path
+from datetime import datetime
 import json
 from Queue import Queue, Empty
 
@@ -15,7 +16,6 @@ from kivy.uix.image import AsyncImage, Image
 from kivy.uix.popup import Popup
 from kivy.uix.button import Button
 from kivy.uix.label import Label
-from kivy.uix.stacklayout import StackLayout
 from kivy.uix.textinput import TextInput
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.scrollview import ScrollView
@@ -48,7 +48,7 @@ x_step = find_step(Window.width)
 y_step = find_step(Window.height)
 canvas_move_direction = 'to_left'
 
-config_file = path.abspath(path.join(path.dirname(__file__), 'configuration.json'))
+config_file = path.abspath(path.join(path.dirname(__file__), 'config', 'configuration.json'))
 logo_font_path = path.abspath(path.join(path.dirname(__file__), 'fonts', 'free_bsc.ttf'))
 
 screen_manager = ScreenManager(transition=FadeTransition())
@@ -59,6 +59,91 @@ color = (0.9, 0.9, 0.9, 0.5)
 def update_rect(instance, value):
     instance.rect.pos = instance.pos
     instance.rect.size = instance.size
+
+
+class SidePanel(Screen):
+    def __init__(self):
+        super(SidePanel, self).__init__()
+        if me:
+            body = GridLayout(cols=1, spacing=2, size_hint=(1, None), size=(Window.width, Window.height))
+            body.bind(minimum_height=body.setter('height'))
+            with body.canvas.before:
+                Color(0.956, 1, 1, 0.2)
+                body.rect = Rectangle(size=(Window.width, Window.height), pos=body.pos)
+            body.bind(pos=update_rect, size=update_rect)
+            container = RelativeLayout()
+
+            profile_picture = AsyncImage(
+                source='back.png',
+                pos_hint={'center_x': 0.5, 'center_y': 0.9},
+                size_hint=(None, None),
+                size=(Window.width / 5, Window.height / 5)
+            )
+            container.add_widget(profile_picture)
+            container.add_widget(Label(text=str(me['username']), pos_hint={'center_x': 0.5, 'center_y': 0.8}))
+            container.add_widget(Label(text=str(me['reputation']), pos_hint={'center_x': 0.3, 'center_y': 0.7}))
+
+            home = AsyncImage(
+                source='home.png',
+                pos_hint={'center_x': 0.2, 'center_y': 0.55},
+                size_hint=(None, None),
+                size=(Window.width / 15, Window.height / 15)
+            )
+            self.add_widget(Label(
+                text='Home',
+                pos_hint={'center_x': 0.5, 'center_y': 0.55},
+            ))
+            container.add_widget(home)
+            body.add_widget(container)
+            # a = FileChooserIconView()
+            # a.filters = ['*.png', '*.jpg', '*.jpeg']
+            # a.bind(on_submit=self.choose_file)
+            # close = Button(size_hint=(None, None), size=(50, 50))
+            # close.bind(on_press=partial(self.close_file_chooser, a))
+            # self.add_widget(a)
+            self.add_widget(body)
+
+            # def choose_file(self, *args):
+            #     post_image(me['id'], args[1][0])
+            #
+            # def close_file_chooser(self, *args):
+            #     self.remove_widget(args[0])
+
+
+class Common(RelativeLayout):
+    root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+    box_container = BoxLayout(orientation='vertical')
+
+    header = BoxLayout(orientation='horizontal', size_hint=(None, None), size=(Window.width, Window.height * .1))
+    with header.canvas.before:
+        Color(0, 0.517, 0.705, 1)
+        header.rect = Rectangle(size=header.size, pos=header.pos)
+    header.bind(pos=update_rect, size=update_rect)
+    toggle_button = Image(
+        size_hint=(None, None),
+        size=(header.width / 15, header.height),
+        source='statics/back.png',
+        padding=(100, 100),
+    )
+    header.add_widget(toggle_button)
+    header.add_widget(Label(text='Questions'))
+    scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
+    scroll_view.bar_width = '5dp'
+    scroll_view.effect_cls = OverScrollEffect
+    body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+    with body.canvas.before:
+        Color(1.0, 1.0, 1.0, 1)
+        body.rect = Rectangle(size=(Window.width, Window.height), pos=body.pos)
+    body.bind(minimum_height=body.setter('height'))
+    scroll_view.add_widget(body)
+    box_container.add_widget(header)
+    box_container.add_widget(scroll_view)
+    navigation_drawer = NavigationDrawer()
+    navigation_drawer.anim_type = 'slide_above_anim'
+    side_panel = SidePanel()
+    navigation_drawer.add_widget(side_panel)
+    navigation_drawer.add_widget(box_container)
+    Window.add_widget(navigation_drawer)
 
 
 class MainScreen(Screen):
@@ -145,7 +230,6 @@ class MainScreen(Screen):
                 font_size=dp(12),
                 halign='left',
             )
-            print description.pos_hint
             description.text_size = (self.container.size[0] / 2, self.container.size[1])
             # title.on_touch_down()
             self.container.add_widget(description)
@@ -956,82 +1040,111 @@ class UserScreen(Screen):
             Window.add_widget(navigation_drawer)
 
 
-class RankScreen(Screen):
-    def __init__(self):
+class RankScreen(Screen, Common):
+    def __init__(self, name):
+        self.offset = 0
         super(RankScreen, self).__init__()
+        self.name = name
+        Clock.schedule_once(
+            partial(insert_progress_bar, Window)) if progress_bar not in self.children else None
+        self.event = Clock.schedule_interval(partial(async_await_resp, self, self.on_resp_ready), EVENT_INTERVAL_RATE)
+        get_ranking(resps, me['id'], session, 0, 10)
 
-        root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
-        box_container = BoxLayout(orientation='vertical')
-
-        header = GridLayout(cols=1, size_hint=(1, .05))
-        with header.canvas.before:
-            Color(.28, .40, .28, .8)
-            header.rect = Rectangle(size=header.size, pos=header.pos)
-        header.bind(pos=update_rect, size=update_rect)
-        header.add_widget(Label(text='Ranking'))
-
-        body = GridLayout(cols=1, spacing=2, size_hint=(1, .90))
-        body.bind(minimum_height=body.setter('height'))
-
-        with body.canvas.before:
-            Color(.65, .72, .66, .8)
-            body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=body.pos)
-        body.bind(pos=update_rect, size=update_rect)
-
-        box_container.add_widget(header)
-        box_container.add_widget(body)
-
-        root.add_widget(box_container)
-        self.add_widget(root)
-
-
-class SidePanel(Screen):
-    def __init__(self):
-        super(SidePanel, self).__init__()
-        if me:
-            body = GridLayout(cols=1, spacing=2, size_hint=(1, None), size=(Window.width, Window.height))
-            body.bind(minimum_height=body.setter('height'))
-            with body.canvas.before:
-                Color(0.956, 1, 1, 0.2)
-                body.rect = Rectangle(size=(Window.width, Window.height), pos=body.pos)
-            body.bind(pos=update_rect, size=update_rect)
-            container = RelativeLayout()
-
-            profile_picture = AsyncImage(
-                source='back.png',
-                pos_hint={'center_x': 0.5, 'center_y': 0.9},
-                size_hint=(None, None),
-                size=(Window.width / 5, Window.height / 5)
+    def on_resp_ready(self, resp):
+        for a in resp['ranking']:
+            container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 8))
+            container.clearcolor = (1, 1, 0, 0.5)
+            with container.canvas.before:
+                Color(0, 0, 0, 0.1)
+                Line(
+                    points=[container.x, container.x, container.width / 1.03, container.x, 0, 0],
+                    width=1,
+                )
+                Line(points=[Window.width / 9, 10, Window.width / 9, container.height - 10], width=1)
+            container.add_widget(
+                Image(
+                    size_hint=(None, None),
+                    size=(container.width / 10, container.height / 1.1),
+                    source='statics/circle.png',
+                    pos_hint={'center_x': 0.05, 'center_y': 0.5},
+                )
             )
-            container.add_widget(profile_picture)
-            container.add_widget(Label(text=str(me['username']), pos_hint={'center_x': 0.5, 'center_y': 0.8}))
-            container.add_widget(Label(text=str(me['reputation']), pos_hint={'center_x': 0.3, 'center_y': 0.7}))
-
-            home = AsyncImage(
-                source='home.png',
-                pos_hint={'center_x': 0.2, 'center_y': 0.55},
-                size_hint=(None, None),
-                size=(Window.width / 15, Window.height / 15)
+            container.add_widget(
+                Label(
+                    text=str((self.offset + 1)),
+                    markup=True,
+                    pos_hint={'center_x': 0.05, 'center_y': 0.5},
+                    color=(0, 0, 0, 1),
+                    font_size=dp(17),
+                    halign='left',
+                )
             )
-            self.add_widget(Label(
-                text='Home',
-                pos_hint={'center_x': 0.5, 'center_y': 0.55},
-            ))
-            container.add_widget(home)
-            body.add_widget(container)
-            # a = FileChooserIconView()
-            # a.filters = ['*.png', '*.jpg', '*.jpeg']
-            # a.bind(on_submit=self.choose_file)
-            # close = Button(size_hint=(None, None), size=(50, 50))
-            # close.bind(on_press=partial(self.close_file_chooser, a))
-            # self.add_widget(a)
-            self.add_widget(body)
-
-            # def choose_file(self, *args):
-            #     post_image(me['id'], args[1][0])
-            #
-            # def close_file_chooser(self, *args):
-            #     self.remove_widget(args[0])
+            image = a['image']
+            user_image = AsyncImage(
+                source='statics/default.jpg' if not image else '{}/storage/images/image-{}.jpg'.format(
+                    server_url, image.get('key')
+                ),
+                pos_hint={'center_x': 0.9, 'center_y': 0.5},
+                size_hint=(None, None),
+            )
+            user_image.size = (container.width / 6, container.height / 1.1)
+            user_image.allow_stretch = True
+            container.add_widget(user_image)
+            username = Label(
+                text=a['username'],
+                markup=True,
+                pos_hint={'center_x': 0.6, 'center_y': 0.7},
+                color=(0, 0, 0, 1),
+                font_size=dp(16),
+            )
+            username.halign = 'left'
+            username.valign = 'middle'
+            username.text_size = (container.size[0] / 1.1, container.size[1])
+            container.add_widget(username)
+            container.add_widget(
+                Image(
+                    size_hint=(None, None),
+                    size=(container.width / 5, container.height / 5),
+                    source='statics/official.png',
+                    pos_hint={'center_x': 0.15, 'center_y': 0.8},
+                )
+            )
+            bio = Label(
+                text='{} ...'.format(a['bio'][:60]),
+                pos_hint={'center_x': 0.6, 'center_y': 0.29},
+                color=(0, 0, 0, 0.8),
+                font_size=dp(14),
+            )
+            bio.halign = 'left'
+            bio.valign = 'middle'
+            bio.text_size = (container.size[0] / 1.1, container.size[1])
+            container.add_widget(bio)
+            container.add_widget(
+                Label(
+                    text='Created on {}'.format(str(datetime.strptime(a['created'], "%Y-%m-%d %H:%M:%S.%f").date())),
+                    pos_hint={'center_x': 0.7, 'center_y': 0.61},
+                    font_size=dp(11),
+                    text_size=[container.size[0] / 2, container.size[1]]
+                )
+            )
+            container.add_widget(
+                Label(
+                    text=str(a['reputation']),
+                    pos_hint={'center_x': 0.5, 'center_y': 0.5},
+                    font_size=dp(13),
+                    color=(0, 0, 0, 0.8),
+                )
+            )
+            container.add_widget(
+                Image(
+                    size_hint=(None, None),
+                    size=(container.width / 5, container.height / 5),
+                    source='statics/star.png',
+                    pos_hint={'center_x': 0.453, 'center_y': 0.5},
+                )
+            )
+            self.body.add_widget(container)
+            self.offset += 1
 
 
 def switch_to_screen(*args):
@@ -1145,7 +1258,7 @@ class CommunityApp(App):
             me = json.loads(user_info)['user']
             session = json.loads(user_info)['session']
             if me and 'id' in me:
-                switch_to_screen(None, MainScreen, 'main')
+                switch_to_screen(None, RankScreen, 'rank')
         else:
             switch_to_screen(None, SignUp, 'sign_up')
 

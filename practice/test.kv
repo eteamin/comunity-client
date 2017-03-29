@@ -1,0 +1,8 @@
+#:import math math
+
+<MainScreen>:
+    FloatLayout:
+        canvas:
+            Line:
+                points: [root.lineX, root.lineY, root.lineX +.75 *(root.circleRad *math.sin((math.pi /5000 *(root.val)) +math.pi)), root.lineY +.75 *(root.circleRad *math.cos((math.pi /5000 *(root.val)) +math.pi))]
+                width: 2

@@ -1,32 +1,58 @@
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.popup import Popup
+from functools import partial
 from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.popup import Popup
+from kivy.uix.button import Button
+from kivy.core.window import Window
 
 
-class CAP(BoxLayout):
-    def __init__(self):
-        super(CAP, self).__init__()
-        box = BoxLayout(background_color=(0, 255, 0, 0.8))
+class MainApp(App):
 
-        closer = Button(text="Close", pos_hint={'x': 6, 'center_y': 0.04},
-                        size_hint=(0.1, 0.1), background_color=(0, 0, 255, 0.7))
-        box.add_widget(closer)
-
-        box.add_widget(Label(text="", index=6))
-
-        p = Popup(title="", content=box, size=(25,
-                                               25))
-        p.background_color = (0, 0, 255, 0.9)
-
-        closer.bind(on_press=p.dismiss)
-        p.open()
-        self.add_widget(box)
-
-
-class MyApp(App):
     def build(self):
-        return BoxLayout()
+        b = Button(text='click to open popup')
+        b.bind(on_press=partial(self.view_popup))
+        return b
 
-MyApp().run()
+    def view_popup(self, *args):
+        data = [1, 2, 3, 4]
+        a = PopView(data)
+        a.popup.open()
+
+
+class PopView(Popup):
+    items = ''
+    def __init__(self, data):
+        super(PopView, self).__init__()
+        self.data = data
+        content = BoxLayout()
+        for d in self.data:
+            item = Button(text=str(d))
+            item.bind(on_press=partial(self.modify_items_selection, item))
+            content.add_widget(item)
+        ok_button = Button(text='OK', size_hint=(None, None), size=(150, 50))
+        content.add_widget(ok_button)
+
+        ok_button = Button(text='Save', size_hint=(None, None), size=(Window.width / 5, Window.height / 15))
+        content.add_widget(ok_button)
+        self.popup = Popup(
+            content=content,
+            size_hint=(None, None),
+            size=(Window.width / 3, Window.height / 3),
+            opacity=0.7,
+            auto_dismiss=True,
+        )
+        ok_button.bind(on_press=self.save_data)
+
+    def modify_items_selection(self, *args):
+        item = args[0]
+        if item not in self.items:
+            self.items += '%s' % item
+        else:
+            self.items = self.items.replace('%s' % item, '')
+
+    def save_data(self, *args):
+        print('Data saved')
+
+
+if __name__ in ('__main__', '__android__'):
+    MainApp().run()

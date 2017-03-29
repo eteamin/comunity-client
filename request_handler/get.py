@@ -32,6 +32,15 @@ def get_children(resps, parent_id, account_id, session):
     )
 
 
+def get_ranking(resps, account_id, session, _from, to):
+    RequestWrapper(
+        resps,
+        'get',
+        '{}/ranking?_from={}&to={}'.format(server_url, _from, to),
+        headers=make_headers(session_id=session, account_id=account_id),
+    )
+
+
 def get_notifications(account_id):
     return get('%s/get/notifications/%s' % (server_url, account_id), headers=make_headers()).json()['notifications']
 

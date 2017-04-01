@@ -3,7 +3,6 @@ from functools import partial
 from os import path
 from datetime import datetime
 import json
-from Queue import Queue, Empty
 
 from kivy.app import App
 from kivy.core.window import Window
@@ -26,10 +25,8 @@ from kivy.utils import platform, get_color_from_hex
 
 from drawer import NavigationDrawer
 from request_handler import *
-from helpers import *
-
-resps = Queue()
-answers_resp = Queue()  # Specifically for async awaiting answers and its comments alongside question
+from helpers import normalize_tags, normalize_number, tell_time_ago, Alert, OverScrollEffect, server_url, find_step, \
+        valid_email, valid_username, valid_password
 
 me = None
 session = None
@@ -38,7 +35,10 @@ question_id = None
 texture = None
 tags = None
 EVENT_INTERVAL_RATE = 0.1
-progress_bar = ProgressBar(max=100)
+progress_bar = ProgressBar()
+_range = 20
+to = 20
+_from = 0
 
 texture_size = (3, 3)
 canvas_size = (Window.width * 10, Window.height * 10)
@@ -111,94 +111,56 @@ class SidePanel(Screen):
 
 
 class Common(RelativeLayout):
-    root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
-    box_container = BoxLayout(orientation='vertical')
+    def __init__(self, pagename):
+        super(Common, self).__init__()
+        box_container = BoxLayout(orientation='vertical')
 
-    header = BoxLayout(orientation='horizontal', size_hint=(None, None), size=(Window.width, Window.height * .1))
-    with header.canvas.before:
-        Color(0, 0.517, 0.705, 1)
-        header.rect = Rectangle(size=header.size, pos=header.pos)
-    header.bind(pos=update_rect, size=update_rect)
-    toggle_button = Image(
-        size_hint=(None, None),
-        size=(header.width / 15, header.height),
-        source='statics/back.png',
-        padding=(100, 100),
-    )
-    header.add_widget(toggle_button)
-    header.add_widget(Label(text='Questions'))
-    scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
-    scroll_view.bar_width = '5dp'
-    scroll_view.effect_cls = OverScrollEffect
-    body = GridLayout(cols=1, spacing=2, size_hint_y=None)
-    with body.canvas.before:
-        Color(1.0, 1.0, 1.0, 1)
-        body.rect = Rectangle(size=(Window.width, Window.height), pos=body.pos)
-    body.bind(minimum_height=body.setter('height'))
-    scroll_view.add_widget(body)
-    box_container.add_widget(header)
-    box_container.add_widget(scroll_view)
-    navigation_drawer = NavigationDrawer()
-    navigation_drawer.anim_type = 'slide_above_anim'
-    side_panel = SidePanel()
-    navigation_drawer.add_widget(side_panel)
-    navigation_drawer.add_widget(box_container)
-    Window.add_widget(navigation_drawer)
-
-
-class MainScreen(Screen):
-    def __init__(self, name):
-        super(MainScreen, self).__init__()
-        self.name = name
-        self.box_container = BoxLayout(orientation='vertical')
-
-        self.header = BoxLayout(orientation='horizontal', size_hint=(None, None),
-                                size=(Window.width, Window.height * .1))
-        with self.header.canvas.before:
+        header = BoxLayout(orientation='horizontal', size_hint=(None, None), size=(Window.width, Window.height * .1))
+        with header.canvas.before:
             Color(0, 0.517, 0.705, 1)
-            self.header.rect = Rectangle(size=self.header.size, pos=self.header.pos)
-        self.header.bind(pos=update_rect, size=update_rect)
+            header.rect = Rectangle(size=header.size, pos=header.pos)
+        header.bind(pos=update_rect, size=update_rect)
         self.toggle_button = Image(
             size_hint=(None, None),
-            size=(self.header.width / 15, self.header.height),
-            source='back.png',
+            size=(header.width / 15, header.height),
+            source='statics/back.png',
             padding=(100, 100),
         )
-        self.header.add_widget(self.toggle_button)
-        self.header.add_widget(Label(text='Questions'))
-        self.scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
-        self.scroll_view.bar_width = '5dp'
-        self.scroll_view.effect_cls = OverScrollEffect
+        header.add_widget(self.toggle_button)
+        header.add_widget(Label(text=str(pagename)))
+        scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
+        scroll_view.bar_width = '5dp'
+        scroll_view.effect_cls = OverScrollEffect
         self.body = GridLayout(cols=1, spacing=2, size_hint_y=None)
-        self.body.bind(minimum_height=self.body.setter('height'))
-
         with self.body.canvas.before:
             Color(1.0, 1.0, 1.0, 1)
-            self.body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=self.body.pos)
+            self.body.rect = Rectangle(size=(Window.width, Window.height), pos=self.body.pos)
+            self.body.bind(minimum_height=self.body.setter('height'))
         self.body.bind(pos=update_rect, size=update_rect)
-
-        self.event_scheduled = True
-        self.scroll_view.add_widget(self.body)
-
-        self.box_container.add_widget(self.header)
-        # self.box_container.add_widget(self.nav_bar)
-        self.box_container.add_widget(self.scroll_view)
+        scroll_view.add_widget(self.body)
+        box_container.add_widget(header)
+        box_container.add_widget(scroll_view)
         self.navigation_drawer = NavigationDrawer()
         self.navigation_drawer.anim_type = 'slide_above_anim'
         side_panel = SidePanel()
         self.navigation_drawer.add_widget(side_panel)
-        self.navigation_drawer.add_widget(self.box_container)
+        self.navigation_drawer.add_widget(box_container)
         Window.add_widget(self.navigation_drawer)
+
+
+class MainScreen(Screen, Common):
+    def __init__(self, name):
+        super(MainScreen, self).__init__(pagename='Main')
+        self.name = name
         Clock.schedule_once(
             partial(insert_progress_bar, Window)) if progress_bar not in self.children else None
-        self.event = Clock.schedule_interval(partial(async_await_resp, self, self.on_resp_ready), EVENT_INTERVAL_RATE)
-        get_questions(resps, me['id'], session)
+        get_questions(self.on_resp_ready, me['id'], session, _from, to)
 
     def on_touch_down(self, touch):
         if self.toggle_button.collide_point(*touch.pos):
             self.navigation_drawer.toggle_state()
 
-    def on_resp_ready(self, resp):
+    def on_resp_ready(self, req, resp):
         for q in resp['questions']:
             self.container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 5))
             with self.container.canvas.before:
@@ -245,7 +207,7 @@ class MainScreen(Screen):
                 Image(
                     size_hint=(None, None),
                     size=(self.container.width / 5, self.container.height / 5),
-                    source='up.png',
+                    source='statics/up.png',
                     pos_hint={'center_x': 0.05, 'center_y': 0.73},
                 )
             )
@@ -253,7 +215,7 @@ class MainScreen(Screen):
                 Image(
                     size_hint=(None, None),
                     size=(self.container.width / 5, self.container.height / 5),
-                    source='view.png',
+                    source='statics/view.png',
                     pos_hint={'center_x': 0.05, 'center_y': 0.40},
                 )
             )
@@ -267,7 +229,7 @@ class MainScreen(Screen):
 
             # Handle tags
             tags_container = BoxLayout(
-                spacing=3,
+                spacing=dp(1),
                 orientation='horizontal',
                 size_hint=(None, None),
                 size=(Window.width * .05, Window.height * .05),
@@ -317,7 +279,7 @@ class MainScreen(Screen):
 
             image = q['accounts']['image']
             user_image = AsyncImage(
-                source='default.jpg' if not image else '{}/storage/images/image-{}.jpg'.format(
+                source='statics/default.jpg' if not image else '{}/storage/images/image-{}.jpg'.format(
                     server_url, image.get('key')
                 ),
                 pos_hint={'center_x': 0.75, 'center_y': 0.25},
@@ -525,16 +487,10 @@ class QuestionScreen(Screen):
                 self.body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=self.body.pos)
                 self.body.bind(pos=update_rect, size=update_rect)
 
-            Clock.schedule_once(
-                partial(insert_progress_bar, Window)) if progress_bar not in self.children else None
-            self.event = Clock.schedule_interval(
-                partial(async_await_resp, self, self.on_question_resp_ready), EVENT_INTERVAL_RATE
-            )
             self.question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height))
             self.answers_container = GridLayout(cols=1, spacing=2, size_hint_y=None)
             self.body.add_widget(self.question_container)
             self.body.add_widget(self.answers_container)
-            get_question(resps, question_id, me['id'], session)
 
             scroll_view.add_widget(self.body)
             box_container.add_widget(header)
@@ -841,16 +797,12 @@ class SignUp(Screen):
             if self._register():
                 self.event_scheduled = True
                 Clock.unschedule(self.canvas_event)
-                Clock.schedule_once(partial(insert_progress_bar)) if progress_bar not in self.children else None
-                self.event = Clock.schedule_interval(
-                    partial(async_await_resp, self, self.on_resp_ready), EVENT_INTERVAL_RATE
-                )
+
 
     # noinspection PyUnusedLocal
     def _register(self, *args):
         self.validate_registration_inputs()
         if self.validation_message == '':
-            register(resps, self.user_name_text, self.password_text, self.email_text)
             return True
         else:
             Alert('Hint', self.validation_message)
@@ -964,18 +916,13 @@ class SignIn(Screen):
         if not self.event_scheduled:
             if self._sign_in():
                 self.event_scheduled = True
-                Clock.unschedule(self.canvas_event)
-                Clock.schedule_once(partial(insert_progress_bar, self)) if progress_bar not in self.children else None
-                self.event = Clock.schedule_interval(
-                    partial(async_await_resp, self, self.on_resp_ready), EVENT_INTERVAL_RATE
-                )
+
 
     # noinspection PyUnusedLocal
     def _sign_in(self, *args):
         # print 'doing registration'
         self.validate_login_inputs()
         if self.validation_message == '':
-            login(resps, self.user_name_text, self.password_text)
             return True
         else:
             Alert('Hint', self.validation_message)
@@ -1043,14 +990,53 @@ class UserScreen(Screen):
 class RankScreen(Screen, Common):
     def __init__(self, name):
         self.offset = 0
-        super(RankScreen, self).__init__()
+        super(RankScreen, self).__init__(pagename='Ranking')
         self.name = name
+        self.pagination = GridLayout(
+            rows=1,
+            cols=10,
+            size_hint=(None, None),
+            size=(Window.width, Window.height / 15),
+            spacing=dp(2),
+            padding=dp(2)
+        )
+        self._load()
+
+    def _load(self):
+        print self.pagination.children
         Clock.schedule_once(
             partial(insert_progress_bar, Window)) if progress_bar not in self.children else None
-        self.event = Clock.schedule_interval(partial(async_await_resp, self, self.on_resp_ready), EVENT_INTERVAL_RATE)
-        get_ranking(resps, me['id'], session, 0, 10)
+        get_total_accounts(callback=self.on_info_ready, session=session, account_id=me['id']) if \
+            self.pagination.children == [] else self.body.add_widget(self.pagination)  # Do not load again
+        get_ranking(callback=self.on_resp_ready, session=session, account_id=me['id'], _from=_from, to=to)
 
-    def on_resp_ready(self, resp):
+    def on_info_ready(self, req, resp):
+        pages = int(resp['total'] / to) + 2
+        pages = 10 if pages > 10 else pages
+        for i in range(1, pages):
+            btn = Button(
+                text=str(i),
+                size_hint=(None, None),
+                size=(self.pagination.width / 10, self.pagination.height),
+                font_size=dp(10),
+                color=(0, 0.517, 0.705, 1),
+                background_normal='',
+                background_color=get_color_from_hex('#e1ecf4'),
+            )
+            btn.bind(on_press=partial(self.toggle_pagination, i))
+            self.pagination.add_widget(btn)
+        self.body.add_widget(self.pagination)
+
+    def toggle_pagination(self, *args):
+        page = int(args[0])
+        global _from, to
+        _from = int(_range / 2) * page if page > 1 else 0
+        to = _range * page if page > 1 else _range
+        self.offset = _from
+        self.body.clear_widgets()
+        self._load()
+
+    def on_resp_ready(self, req, resp):
         for a in resp['ranking']:
             container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 8))
             container.clearcolor = (1, 1, 0, 0.5)
@@ -1124,12 +1110,13 @@ class RankScreen(Screen, Common):
                     text='Created on {}'.format(str(datetime.strptime(a['created'], "%Y-%m-%d %H:%M:%S.%f").date())),
                     pos_hint={'center_x': 0.7, 'center_y': 0.61},
                     font_size=dp(11),
+                    color=(0, 0, 0, 0.8),
                     text_size=[container.size[0] / 2, container.size[1]]
                 )
             )
             container.add_widget(
                 Label(
-                    text=str(a['reputation']),
+                    text=normalize_number(a['reputation']),
                     pos_hint={'center_x': 0.5, 'center_y': 0.5},
                     font_size=dp(13),
                     color=(0, 0, 0, 0.8),
@@ -1140,11 +1127,24 @@ class RankScreen(Screen, Common):
                     size_hint=(None, None),
                     size=(container.width / 5, container.height / 5),
                     source='statics/star.png',
-                    pos_hint={'center_x': 0.453, 'center_y': 0.5},
+                    pos_hint={'center_x': 0.452, 'center_y': 0.5},
                 )
             )
             self.body.add_widget(container)
             self.offset += 1
+
+
+def on_request_progress(req, current, total):
+    progress_bar.max = total
+    Clock.schedule_once(partial(_update_progress_bar, current))
+
+
+def _update_progress_bar(value, dt):
+    progress_bar.value = value
+
+
+def on_request_failure(*args):
+    Alert('Network Error', 'Seems like your internet connection is in trouble!', 'Retry')
 
 
 def switch_to_screen(*args):
@@ -1198,26 +1198,6 @@ def insert_progress_bar(*args):
     progress_bar.value = 0
 
 
-# noinspection PyUnusedLocal
-def async_await_resp(widget, callback, dt):
-    try:
-        resp = resps.get(timeout=EVENT_INTERVAL_RATE / 2)
-        reset(widget)
-        if 'detail' in resp:  # Means an error occurred
-            Alert('Ops!', resp['detail'])
-        else:
-            callback(resp)
-    except Empty as QueueEmpty:
-        progress_bar.value += 2
-
-
-def reset(widget):
-    Clock.unschedule(widget.event)
-    Window.remove_widget(progress_bar)
-    widget.event_scheduled = False
-    progress_bar.value = 0
-
-
 def write_config(c):
     with open(config_file, 'w') as stream:
         data = json.dumps(c)
@@ -1249,8 +1229,6 @@ def make_texture():
 
 class CommunityApp(App):
     def on_start(self):
-        global texture
-        texture = make_texture()
         global me
         global session
         user_info = read_config()
@@ -1258,8 +1236,10 @@ class CommunityApp(App):
             me = json.loads(user_info)['user']
             session = json.loads(user_info)['session']
             if me and 'id' in me:
-                switch_to_screen(None, RankScreen, 'rank')
+                switch_to_screen(None, MainScreen, 'main')
         else:
+            global texture
+            texture = make_texture()
             switch_to_screen(None, SignUp, 'sign_up')
 
     def on_pause(self):

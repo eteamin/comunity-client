@@ -6,7 +6,6 @@ from pyDes import triple_des
 server_url = 'http://192.168.1.103:8080'
 auth_secret_key = 'b5ad2d8123e8809bba576cfa'
 auth_message = 'I am authorized'
-question_range = 0, 20
 
 
 def make_headers(account_id=None, session_id=None):

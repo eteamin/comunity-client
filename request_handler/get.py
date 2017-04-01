@@ -1,16 +1,18 @@
-from requests import get
+from kivy.network.urlrequest import UrlRequest
 
-from request_handler.wrapper import RequestWrapper
-from helpers.variables import server_url, question_range, make_headers
+from helpers.variables import server_url, make_headers
+from main import on_request_progress, on_request_failure
 
 
-def get_questions(resps, id, session):
-    RequestWrapper(
-        resps,
-        'post',
-        '%s/posts/get_questions' % server_url,
-        headers=make_headers(session_id=session, account_id=id),
-        data={'from': question_range[0], 'to': question_range[1]},
+def get_questions(callback, id, session, _from, to):
+    UrlRequest(
+        method='get',
+        url='{}/posts/get_questions?from={}&to={}'.format(server_url, _from, to),
+        req_headers=make_headers(session_id=session, account_id=id),
+        on_success=callback,
+        on_progress=on_request_progress,
+        on_error=on_request_failure,
+        on_failure=on_request_failure
     )
 
 
@@ -32,12 +34,23 @@ def get_children(resps, parent_id, account_id, session):
     )
 
 
-def get_ranking(resps, account_id, session, _from, to):
-    RequestWrapper(
-        resps,
-        'get',
-        '{}/ranking?_from={}&to={}'.format(server_url, _from, to),
-        headers=make_headers(session_id=session, account_id=account_id),
+def get_ranking(callback, account_id, session, _from, to):
+    UrlRequest(
+        method='get',
+        url='{}/ranking?_from={}&to={}'.format(server_url, _from, to),
+        req_headers=make_headers(session_id=session, account_id=account_id),
+        on_success=callback,
+        on_progress=on_request_progress,
+    )
+
+
+def get_total_accounts(callback, account_id, session):
+    UrlRequest(
+        method='get',
+        url='{}/accounts/total'.format(server_url),
+        req_headers=make_headers(session_id=session, account_id=account_id),
+        on_success=callback,
+        on_progress=on_request_progress
     )
 
 
@@ -53,8 +66,8 @@ def get_user(user_id):
     resp = get('%s/accounts/%s' % (server_url, user_id), headers=make_headers())
     return resp.json()['account'] if resp.status_code == 200 else None
 
-#
-# def get_image(account_id):
-#     image = get('%s/get/image/%s' % (server_url, account_id), headers=make_headers())
-#     with open('%s/%s.jpg' % (files_path, account_id), 'w') as user_image:
-#         user_image.write(image.content)
+
+def get_image(account_id):
+    image = get('%s/get/image/%s' % (server_url, account_id), headers=make_headers())
+    with open('%s/%s.jpg' % (files_path, account_id), 'w') as user_image:
+        user_image.write(image.content)

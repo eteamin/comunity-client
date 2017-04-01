@@ -1,6 +1,6 @@
 import re
 
-from normalize import normalize_tags
+from normalize import normalize_tags, normalize_number
 from timedelta import tell_time_ago
 from alert import Alert
 from overscroll import OverScrollEffect

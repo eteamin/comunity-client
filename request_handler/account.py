@@ -1,9 +1,10 @@
 from helpers.variables import server_url, make_headers
 
-from wrapper import RequestWrapper
+# from wrapper import RequestWrapper
 
 
 def login(resps, user_name, password):
+    return
     RequestWrapper(
         resps,
         'post',
@@ -14,6 +15,7 @@ def login(resps, user_name, password):
 
 
 def register(resps, user_name, password, email_address):
+    return
     payload = {
         'username': user_name,
         'password': password,

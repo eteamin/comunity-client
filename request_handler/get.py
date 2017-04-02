@@ -1,18 +1,20 @@
+from functools import partial
+
 from kivy.network.urlrequest import UrlRequest
 
 from helpers.variables import server_url, make_headers
 from main import on_request_progress, on_request_failure
 
 
-def get_questions(callback, id, session, _from, to):
+def get_questions(callback, id, session, _from, to, screen):
     UrlRequest(
         method='get',
         url='{}/posts/get_questions?from={}&to={}'.format(server_url, _from, to),
         req_headers=make_headers(session_id=session, account_id=id),
         on_success=callback,
         on_progress=on_request_progress,
-        on_error=on_request_failure,
-        on_failure=on_request_failure
+        on_error=partial(on_request_failure, screen),
+        on_failure=partial(on_request_failure, screen)
     )
 
 

@@ -39,6 +39,7 @@ progress_bar = ProgressBar()
 _range = 20
 to = 20
 _from = 0
+touch_x_pos = 0
 
 texture_size = (3, 3)
 canvas_size = (Window.width * 10, Window.height * 10)
@@ -154,7 +155,7 @@ class MainScreen(Screen, Common):
         self.name = name
         Clock.schedule_once(
             partial(insert_progress_bar, Window)) if progress_bar not in self.children else None
-        get_questions(self.on_resp_ready, me['id'], session, _from, to)
+        get_questions(self.on_resp_ready, me['id'], session, _from, to, MainScreen)
 
     def on_touch_down(self, touch):
         if self.toggle_button.collide_point(*touch.pos):
@@ -1003,7 +1004,6 @@ class RankScreen(Screen, Common):
         self._load()
 
     def _load(self):
-        print self.pagination.children
         Clock.schedule_once(
             partial(insert_progress_bar, Window)) if progress_bar not in self.children else None
         get_total_accounts(callback=self.on_info_ready, session=session, account_id=me['id']) if \
@@ -1144,11 +1144,17 @@ def _update_progress_bar(value, dt):
 
 
 def on_request_failure(*args):
-    Alert('Network Error', 'Seems like your internet connection is in trouble!', 'Retry')
+    print 'failed'
+    Alert(
+        'Network Error',
+        'Seems like your internet connection is in trouble!',
+        'Retry',
+        partial(switch_to_screen, args[0], args[0], 'main')
+    )
 
 
 def switch_to_screen(*args):
-    referer = args[0]
+    referer = args[0](name='') if args[0] else None
     s_obj = args[1]
     s_name = args[2]
     if issubclass(s_obj, Screen):

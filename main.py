@@ -1134,6 +1134,12 @@ class RankScreen(Screen, Common):
             self.offset += 1
 
 
+class AboutUs(Screen, Common):
+    def __init__(self, name):
+        super(AboutUs, self).__init__(pagename='About Us')
+        self.name = name
+        
+
 def on_request_progress(req, current, total):
     progress_bar.max = total
     Clock.schedule_once(partial(_update_progress_bar, current))
@@ -1242,7 +1248,7 @@ class CommunityApp(App):
             me = json.loads(user_info)['user']
             session = json.loads(user_info)['session']
             if me and 'id' in me:
-                switch_to_screen(None, MainScreen, 'main')
+                switch_to_screen(None, AboutUs, 'about_us')
         else:
             global texture
             texture = make_texture()

@@ -7,7 +7,7 @@ from kivy.core.window import Window
 
 class Alert(Popup):
 
-    def __init__(self, title, text, button_text, action):
+    def __init__(self, title, text, button_text):
         super(Alert, self).__init__()
         content = AnchorLayout(anchor_x='center', anchor_y='bottom')
         content.add_widget(
@@ -24,6 +24,6 @@ class Alert(Popup):
             opacity=0.7,
             auto_dismiss=False
         )
-        ok_button.bind(on_press=action)
+        ok_button.bind(on_press=popup.dismiss)
 
         popup.open()

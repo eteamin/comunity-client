@@ -758,7 +758,6 @@ class SignUp(Screen):
         register_trigger = Clock.create_trigger(self.register)
         register_button.bind(on_press=partial(register_trigger))
         container.add_widget(register_button)
-        self.event_scheduled = False
 
         login_button = Button(
             text='Already have an account? [b]Sign In![/b]', markup=True,
@@ -794,21 +793,19 @@ class SignUp(Screen):
 
     # noinspection PyUnusedLocal
     def register(self, *args):
-        if not self.event_scheduled:
-            if self._register():
-                self.event_scheduled = True
-                Clock.unschedule(self.canvas_event)
-
-
-    # noinspection PyUnusedLocal
-    def _register(self, *args):
         self.validate_registration_inputs()
         if self.validation_message == '':
-            return True
+            register(self.on_resp_ready, self.user_name_text, self.password_text, self.email_text)
         else:
-            Alert('Hint', self.validation_message)
+            Alert(title='Ops', text=self.validation_message, button_text='Ok')
 
-    def on_resp_ready(self, resp):
+    def on_resp_ready(self, req, resp):
+        Clock.unschedule(self.canvas_event)
+        Alert(
+            title='Congratulations',
+            text='Registration Successful!',
+            button_text='Ok',
+        )
         switch_to_screen(self, SignIn, 'sign_in')
 
     def validate_registration_inputs(self):
@@ -894,9 +891,9 @@ class SignIn(Screen):
         )
         sign_in_button.bind(on_press=self.sign_in)
         container.add_widget(sign_in_button)
-        self.event_scheduled = False
         register_button = Button(
-            text="Don't have an account yet? [b]Sign Up![/b]", markup=True,
+            text="Don't have an account yet? [b]Sign Up![/b]",
+            markup=True,
             size_hint=(None, None),
             size=(Window.width, Window.height / 10),
             pos_hint={'center_x': 0.5, 'center_y': 0.05},
@@ -914,21 +911,14 @@ class SignIn(Screen):
 
     # noinspection PyUnusedLocal
     def sign_in(self, *args):
-        if not self.event_scheduled:
-            if self._sign_in():
-                self.event_scheduled = True
-
-
-    # noinspection PyUnusedLocal
-    def _sign_in(self, *args):
-        # print 'doing registration'
         self.validate_login_inputs()
         if self.validation_message == '':
-            return True
+            login(self.on_resp_ready, self.user_name_text, self.password_text)
         else:
-            Alert('Hint', self.validation_message)
+            Alert(title='Ops', text=self.validation_message, button_text='Ok')
 
-    def on_resp_ready(self, resp):
+    def on_resp_ready(self, req, resp):
+        Clock.unschedule(self.canvas_event)
         write_config(resp)
         switch_to_screen(self, MainScreen, 'main')
 
@@ -1001,6 +991,7 @@ class RankScreen(Screen, Common):
             spacing=dp(2),
             padding=dp(2)
         )
+        self.current_page = 1
         self._load()
 
     def _load(self):
@@ -1138,7 +1129,16 @@ class AboutUs(Screen, Common):
     def __init__(self, name):
         super(AboutUs, self).__init__(pagename='About Us')
         self.name = name
-        
+        get_about_us(self.on_resp_ready, me['id'], session, AboutUs)
+
+    def on_resp_ready(self, req, resp):
+        pass
+
+
+def logout():
+    purge_config()
+    switch_to_screen(None, SignIn, 'sign_in')
+
 
 def on_request_progress(req, current, total):
     progress_bar.max = total
@@ -1149,18 +1149,25 @@ def _update_progress_bar(value, dt):
     progress_bar.value = value
 
 
-def on_request_failure(*args):
-    print 'failed'
+def on_get_failure(*args):
     Alert(
         'Network Error',
         'Seems like your internet connection is in trouble!',
         'Retry',
-        partial(switch_to_screen, args[0], args[0], 'main')
+    )
+    switch_to_screen(args[0], args[0], 'main')
+
+
+def on_post_failure(*args):
+    Alert(
+        'Ops!',
+        args[1]['detail'],
+        'Ok'
     )
 
 
 def switch_to_screen(*args):
-    referer = args[0](name='') if args[0] else None
+    referer = args[0]
     s_obj = args[1]
     s_name = args[2]
     if issubclass(s_obj, Screen):
@@ -1222,6 +1229,11 @@ def read_config():
         return stream.read()
 
 
+def purge_config():
+    with open(config_file, 'w') as stream:
+        stream.write('')
+
+
 def _reload_config():
     global me
     global session
@@ -1245,10 +1257,14 @@ class CommunityApp(App):
         global session
         user_info = read_config()
         if user_info:
-            me = json.loads(user_info)['user']
-            session = json.loads(user_info)['session']
-            if me and 'id' in me:
-                switch_to_screen(None, AboutUs, 'about_us')
+            me = json.loads(user_info).get('user')
+            session = json.loads(user_info).get('session')
+            if me and 'id' in me and session:
+                switch_to_screen(None, RankScreen, 'ranking')
+            else:
+                global texture
+                texture = make_texture()
+                switch_to_screen(None, SignIn, 'sign_in')
         else:
             global texture
             texture = make_texture()

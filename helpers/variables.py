@@ -12,5 +12,5 @@ def make_headers(account_id=None, session_id=None):
     return {
         'session': session_id if session_id else '',
         'account': str(account_id) if account_id else None,
-        'token': b64encode(bytes(triple_des(auth_secret_key).encrypt(auth_message, padmode=2)))
+        'token': b64encode(bytes(triple_des(auth_secret_key).encrypt(auth_message, padmode=2))),
     }

@@ -3,7 +3,7 @@ from functools import partial
 from kivy.network.urlrequest import UrlRequest
 
 from helpers.variables import server_url, make_headers
-from main import on_request_progress, on_request_failure
+from main import on_request_progress, on_get_failure
 
 
 def get_questions(callback, id, session, _from, to, screen):
@@ -13,8 +13,8 @@ def get_questions(callback, id, session, _from, to, screen):
         req_headers=make_headers(session_id=session, account_id=id),
         on_success=callback,
         on_progress=on_request_progress,
-        on_error=partial(on_request_failure, screen),
-        on_failure=partial(on_request_failure, screen)
+        on_error=partial(on_get_failure, screen),
+        on_failure=partial(on_get_failure, screen)
     )
 
 
@@ -53,6 +53,18 @@ def get_total_accounts(callback, account_id, session):
         req_headers=make_headers(session_id=session, account_id=account_id),
         on_success=callback,
         on_progress=on_request_progress
+    )
+
+
+def get_about_us(callback, account_id, session, screen):
+    UrlRequest(
+        method='get',
+        url='{}/about_us'.format(server_url),
+        req_headers=make_headers(session_id=session, account_id=account_id),
+        on_success=callback,
+        on_progress=on_request_progress,
+        on_error=partial(on_get_failure, screen),
+        on_failure=partial(on_get_failure, screen)
     )
 
 

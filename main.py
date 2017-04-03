@@ -459,52 +459,16 @@ class NewQuestionScreen(Screen):
         self.tag_button.text = self.tags_input_text
 
 
-class QuestionScreen(Screen):
+class QuestionScreen(Screen, Common):
     answer_text = ''
 
     def __init__(self, name):
-        super(QuestionScreen, self).__init__()
+        super(QuestionScreen, self).__init__(pagename='Question')
         self.name = name
-        print self.name + 'is called'
-        if question_id:
-            box_container = BoxLayout(orientation='vertical')
+        self.question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height))
+        get_question(self.on_question_resp_ready, question_id, me['id'], session, QuestionScreen)
 
-            header = BoxLayout(
-                orientation='horizontal', size_hint=(None, None),
-                size=(Window.width, Window.height * .1)
-            )
-            with header.canvas.before:
-                Color(0, 0.517, 0.705, 1)
-                header.rect = Rectangle(size=header.size, pos=header.pos)
-            header.bind(pos=update_rect, size=update_rect)
-            header.add_widget(Label(text='Question'))
-
-            scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
-            self.body = GridLayout(cols=1, spacing=2, size_hint_y=None)
-            self.body.bind(minimum_height=self.body.setter('height'))
-
-            with self.body.canvas.before:
-                Color(1.0, 1.0, 1.0, 1)
-                self.body.rect = Rectangle(size=(Window.width, Window.height / 4), pos=self.body.pos)
-                self.body.bind(pos=update_rect, size=update_rect)
-
-            self.question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height))
-            self.answers_container = GridLayout(cols=1, spacing=2, size_hint_y=None)
-            self.body.add_widget(self.question_container)
-            self.body.add_widget(self.answers_container)
-
-            scroll_view.add_widget(self.body)
-            box_container.add_widget(header)
-            box_container.add_widget(scroll_view)
-
-            navigation_drawer = NavigationDrawer()
-
-            side_panel = SidePanel()
-            navigation_drawer.add_widget(side_panel)
-            navigation_drawer.add_widget(box_container)
-            Window.add_widget(navigation_drawer)
-
-    def on_question_resp_ready(self, resp):
+    def on_question_resp_ready(self, req, resp):
         with self.question_container.canvas.before:
             Color(0, 0, 0, 0.1)
             Line(
@@ -522,21 +486,21 @@ class QuestionScreen(Screen):
         title = Label(
             text=_question['title'],
             markup=True,
-            pos_hint={'center_x': 0.36, 'center_y': 1.4},
+            pos_hint={'center_x': 0.36, 'center_y': 0.48},
             color=(0, 0, 0, 1),
             font_size=dp(17),
-            halign='left',
-            valgin='middle',
         )
+        title.halign = 'left'
+        title.valign = 'top'
         self.question_container.add_widget(title)
         title.text_size = (self.question_container.size[0] / 1.5, self.question_container.size[1])
         description = Label(
             text=_question['description'],
-            pos_hint={'center_x': 0.4, 'center_y': 0.29},
+            pos_hint={'center_x': 0.36, 'center_y': 0.4},
             color=(0, 0, 0, 0.8),
             font_size=dp(15),
-            halign='justify',
         )
+        description.halign = 'left'
         description.valign = 'top'
         description.text_size = (self.question_container.size[0] / 1.5, self.question_container.size[1])
         self.question_container.add_widget(description)
@@ -551,7 +515,6 @@ class QuestionScreen(Screen):
         )
         words = len(description.text)
         tags_container.pos_hint['center_y'] = -words / 1000 if words > 500 else words / 2400
-        print tags_container.pos_hint
         for t in _question['tags']:
             tag = Button(
                 text=t['name'],
@@ -566,22 +529,26 @@ class QuestionScreen(Screen):
             tags_container.add_widget(tag)
         self.question_container.add_widget(tags_container)
         # question_container.add_widget(Label(text=question['votes'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
-        self.question_container.add_widget(
-            Label(
+        username = Label(
                 text=_question['accounts']['username'],
-                pos_hint={'center_x': 0.7, 'center_y': 0.4},
+                pos_hint={'center_x': 0.7},
                 font_size=dp(15),
                 color=(0, 0.517, 0.705, 1)
             )
-        )
-        self.question_container.add_widget(
-            Label(
+        username.halign = 'left'
+        username.valign = 'top'
+        self.question_container.add_widget(username)
+
+        creation_date = Label(
                 text=_question['creation_date'],
-                pos_hint={'center_x': 0.7, 'center_y': 0.1},
-                font_size=dp(15),
-                color=(0, 0.517, 0.705, 1)
+                pos_hint={'center_x': 0.65, 'center_y': 0.38},
+                font_size=dp(13),
+                color=(0, 0, 0, 0.8),
             )
-        )
+        creation_date.halign = 'left'
+        creation_date.valign = 'top'
+        self.question_container.add_widget(creation_date)
+        self.body.add_widget(self.question_container)
 
     def on_answers_resp_ready(self, resp):
         pass
@@ -1167,14 +1134,12 @@ def on_post_failure(*args):
 
 
 def switch_to_screen(*args):
-    referer = args[0]
     s_obj = args[1]
     s_name = args[2]
     if issubclass(s_obj, Screen):
+        screen_manager.clear_widgets()
         screen_manager.add_widget(s_obj(name=s_name)) if s_name not in screen_manager.screen_names else None
         screen_manager.current = s_name
-        if referer:
-            screen_manager.real_remove_widget(referer)
     print screen_manager.children
 
 
@@ -1260,7 +1225,7 @@ class CommunityApp(App):
             me = json.loads(user_info).get('user')
             session = json.loads(user_info).get('session')
             if me and 'id' in me and session:
-                switch_to_screen(None, RankScreen, 'ranking')
+                switch_to_screen(None, MainScreen, 'main')
             else:
                 global texture
                 texture = make_texture()

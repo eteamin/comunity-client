@@ -18,12 +18,15 @@ def get_questions(callback, id, session, _from, to, screen):
     )
 
 
-def get_question(resps, question_id, account_id, session):
-    RequestWrapper(
-        resps,
-        'get',
-        '%s/posts/%s' % (server_url, question_id),
-        headers=make_headers(session_id=session, account_id=account_id),
+def get_question(callback, question_id, account_id, session, screen):
+    UrlRequest(
+        method='get',
+        url='{}/posts/{}'.format(server_url, question_id),
+        req_headers=make_headers(session_id=session, account_id=account_id),
+        on_success=callback,
+        on_progress=on_request_progress,
+        on_error=partial(on_get_failure, screen),
+        on_failure=partial(on_get_failure, screen)
     )
 
 

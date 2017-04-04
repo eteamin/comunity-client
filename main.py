@@ -465,7 +465,7 @@ class QuestionScreen(Screen, Common):
     def __init__(self, name):
         super(QuestionScreen, self).__init__(pagename='Question')
         self.name = name
-        self.question_container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height))
+        self.question_container = GridLayout(size_hint=(1, None), size=(Window.width, Window.height))
         get_question(self.on_question_resp_ready, question_id, me['id'], session, QuestionScreen)
 
     def on_question_resp_ready(self, req, resp):
@@ -499,10 +499,14 @@ class QuestionScreen(Screen, Common):
             pos_hint={'center_x': 0.36, 'center_y': 0.4},
             color=(0, 0, 0, 0.8),
             font_size=dp(15),
+            size_hint_y=None
         )
         description.halign = 'left'
         description.valign = 'top'
-        description.text_size = (self.question_container.size[0] / 1.5, self.question_container.size[1])
+        description.bind(width=lambda s, w: s.setter('text_size')(s, (w, None)))
+        description.bind(texture_size=description.setter('size'))
+        # description.text_size[0] = self.question_container.size[0] / 1.5, None
+        # description.height = 50
         self.question_container.add_widget(description)
 
         # Handle tags
@@ -1121,8 +1125,8 @@ def on_get_failure(*args):
         'Network Error',
         'Seems like your internet connection is in trouble!',
         'Retry',
+        action=partial(switch_to_screen, args[0], args[0], 'main')
     )
-    switch_to_screen(args[0], args[0], 'main')
 
 
 def on_post_failure(*args):

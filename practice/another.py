@@ -1,28 +1,35 @@
 from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.properties import BooleanProperty
-from kivy.lang import Builder
-
-Builder.load_string('''
-<MyWidget>:
-    CheckBox:
-        active: root.odrzuc
-        group: "Zone "
-
-    CheckBox:
-        active: root.decyduj
-        group: "Zone "
-
-''')
-
-class MyWidget(BoxLayout):
-    odrzuc = BooleanProperty(False)
-    decyduj = BooleanProperty(True)
+from kivy.uix.label import Label
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.floatlayout import FloatLayout
 
 
 class MyApp(App):
     def build(self):
-        return MyWidget()
+        root = FloatLayout()
+
+        b = GridLayout(
+            cols=1,
+            pos_hint={
+                'center_x': .5,
+                'center_y': .5},
+            size_hint=(None, None),
+            spacing=20,
+            width=200)
+        b.bind(minimum_height=b.setter('height'))
+        root.add_widget(b)
+
+        for text_lenght in range(0, 80, 20):
+            l = Label(
+                text='word ' * text_lenght,
+                size_hint_y=None)
+            l.bind(width=lambda s, w:
+                   s.setter('text_size')(s, (w, None)))
+            l.bind(texture_size=l.setter('size'))
+            b.add_widget(l)
+
+        return root
+
 
 if __name__ == '__main__':
     MyApp().run()

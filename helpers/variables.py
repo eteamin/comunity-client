@@ -4,6 +4,7 @@ from pyDes import triple_des
 
 
 server_url = 'http://192.168.43.150:8080'
+image_storage = '{}/storage/images/image-'.format(server_url)
 auth_secret_key = 'b5ad2d8123e8809bba576cfa'
 auth_message = 'I am authorized'
 

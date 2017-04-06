@@ -71,6 +71,18 @@ def get_about_us(callback, account_id, session, screen):
     )
 
 
+def get_ads(callback, account_id, session, screen):
+    UrlRequest(
+        method='get',
+        url='{}/ads'.format(server_url),
+        req_headers=make_headers(session_id=session, account_id=account_id),
+        on_success=callback,
+        on_progress=on_request_progress,
+        on_error=partial(on_get_failure, screen),
+        on_failure=partial(on_get_failure, screen)
+    )
+
+
 def get_notifications(account_id):
     return get('%s/get/notifications/%s' % (server_url, account_id), headers=make_headers()).json()['notifications']
 

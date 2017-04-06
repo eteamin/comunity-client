@@ -26,7 +26,7 @@ from kivy.utils import platform, get_color_from_hex
 from drawer import NavigationDrawer
 from request_handler import *
 from helpers import normalize_tags, normalize_number, tell_time_ago, Alert, OverScrollEffect, server_url, find_step, \
-        valid_email, valid_username, valid_password
+        valid_email, valid_username, valid_password, image_storage
 
 me = None
 session = None
@@ -112,7 +112,7 @@ class SidePanel(Screen):
 
 
 class Common(RelativeLayout):
-    def __init__(self, pagename):
+    def __init__(self, pagename, body_cols=1):
         super(Common, self).__init__()
         box_container = BoxLayout(orientation='vertical')
 
@@ -132,7 +132,7 @@ class Common(RelativeLayout):
         scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.9))
         scroll_view.bar_width = '5dp'
         scroll_view.effect_cls = OverScrollEffect
-        self.body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+        self.body = GridLayout(cols=body_cols, spacing=2, size_hint_y=None)
         with self.body.canvas.before:
             Color(1.0, 1.0, 1.0, 1)
             self.body.rect = Rectangle(size=(Window.width, Window.height), pos=self.body.pos)
@@ -463,10 +463,48 @@ class QuestionScreen(Screen, Common):
     answer_text = ''
 
     def __init__(self, name):
-        super(QuestionScreen, self).__init__(pagename='Question')
+        super(QuestionScreen, self).__init__(pagename='Question', body_cols=2)
         self.name = name
-        self.question_container = GridLayout(size_hint=(1, None), size=(Window.width, Window.height))
+        self.ads_container = RelativeLayout(
+            size_hint=(None, None),
+            size=(Window.width / 4, Window.height)
+        )
+        self.ads_grid = GridLayout(
+            cols=1,
+            pos_hint={'center_x': .7, 'center_y': .8},
+            size_hint=(None, None),
+            spacing=dp(3),
+            width=self.ads_container.width
+        )
+        self.ads_grid.bind(minimum_height=self.ads_grid.setter('height'))
+        self.ads_container.add_widget(self.ads_grid)
+
+        self.question_container = RelativeLayout(
+            size_hint=(None, None),
+            size=(Window.width / 1.5, Window.height)
+        )
+        self.question_grid = GridLayout(
+                cols=1,
+                pos_hint={'center_x': .55, 'center_y': .8},
+                size_hint=(None, None),
+                spacing=dp(3),
+                width=self.question_container.width
+            )
+        self.question_grid.bind(minimum_height=self.question_grid.setter('height'))
+        self.question_container.add_widget(self.question_grid)
+
         get_question(self.on_question_resp_ready, question_id, me['id'], session, QuestionScreen)
+        get_ads(self.on_ads_ready, me['id'], session, QuestionScreen)
+
+    def on_ads_ready(self, req, resp):
+        for ad in resp['ads']:
+            img = AsyncImage(
+                    source='{}{}.jpg'.format(image_storage, ad.get('image').get('key')) if 'image' in ad else '',
+                    size_hint=(None, None),
+                    size=(self.ads_grid.width, self.ads_grid.height)
+                )
+            self.ads_grid.add_widget(img)
+        self.body.add_widget(self.ads_container)
 
     def on_question_resp_ready(self, req, resp):
         with self.question_container.canvas.before:
@@ -486,52 +524,52 @@ class QuestionScreen(Screen, Common):
         title = Label(
             text=_question['title'],
             markup=True,
-            pos_hint={'center_x': 0.36, 'center_y': 0.48},
+            pos_hint={'center_x': 0.55, 'center_y': 0.48},
             color=(0, 0, 0, 1),
             font_size=dp(17),
         )
         title.halign = 'left'
         title.valign = 'top'
-        self.question_container.add_widget(title)
-        title.text_size = (self.question_container.size[0] / 1.5, self.question_container.size[1])
+        self.question_grid.add_widget(title)
+        title.text_size = self.question_grid.size[0], self.question_grid.size[1]
         description = Label(
             text=_question['description'],
-            pos_hint={'center_x': 0.36, 'center_y': 0.4},
+            pos_hint={'center_x': 0.55, 'center_y': 0.4},
             color=(0, 0, 0, 0.8),
             font_size=dp(15),
             size_hint_y=None
         )
         description.halign = 'left'
         description.valign = 'top'
-        description.bind(width=lambda s, w: s.setter('text_size')(s, (w, None)))
         description.bind(texture_size=description.setter('size'))
-        # description.text_size[0] = self.question_container.size[0] / 1.5, None
-        # description.height = 50
-        self.question_container.add_widget(description)
-
-        # Handle tags
-        tags_container = BoxLayout(
-            spacing=3,
-            orientation='horizontal',
-            size_hint=(None, None),
-            size=(Window.width * .05, Window.height * .05),
-            pos_hint={'center_x': 0.09, 'center_y': 0},
-        )
-        words = len(description.text)
-        tags_container.pos_hint['center_y'] = -words / 1000 if words > 500 else words / 2400
-        for t in _question['tags']:
-            tag = Button(
-                text=t['name'],
-                size_hint=(None, None),
-                size=(Window.width / 7, Window.height / 28),
-                font_size=dp(10),
-                color=(0, 0.517, 0.705, 1),
-                background_normal='',
-                background_color=get_color_from_hex('#e1ecf4'),
-            )
-            # tag.text_size = tag.size
-            tags_container.add_widget(tag)
-        self.question_container.add_widget(tags_container)
+        description.text_size = self.question_grid.size[0], self.question_grid.size[1]
+        description.texture_update()
+        self.question_grid.add_widget(description)
+        print description.texture_size
+        #
+        # # Handle tags
+        # tags_container = BoxLayout(
+        #     spacing=3,
+        #     orientation='horizontal',
+        #     size_hint=(None, None),
+        #     size=(Window.width * .05, Window.height * .05),
+        #     pos_hint={'center_x': 0.09, 'center_y': 0},
+        # )
+        # words = len(description.text)
+        # tags_container.pos_hint['center_y'] = -words / 1000 if words > 500 else words / 2400
+        # for t in _question['tags']:
+        #     tag = Button(
+        #         text=t['name'],
+        #         size_hint=(None, None),
+        #         size=(Window.width / 7, Window.height / 28),
+        #         font_size=dp(10),
+        #         color=(0, 0.517, 0.705, 1),
+        #         background_normal='',
+        #         background_color=get_color_from_hex('#e1ecf4'),
+        #     )
+        #     # tag.text_size = tag.size
+        #     tags_container.add_widget(tag)
+        # self.question_container.add_widget(tags_container)
         # question_container.add_widget(Label(text=question['votes'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
         username = Label(
                 text=_question['accounts']['username'],
@@ -541,7 +579,7 @@ class QuestionScreen(Screen, Common):
             )
         username.halign = 'left'
         username.valign = 'top'
-        self.question_container.add_widget(username)
+        self.question_grid.add_widget(username)
 
         creation_date = Label(
                 text=_question['creation_date'],
@@ -551,7 +589,7 @@ class QuestionScreen(Screen, Common):
             )
         creation_date.halign = 'left'
         creation_date.valign = 'top'
-        self.question_container.add_widget(creation_date)
+        self.question_grid.add_widget(creation_date)
         self.body.add_widget(self.question_container)
 
     def on_answers_resp_ready(self, resp):

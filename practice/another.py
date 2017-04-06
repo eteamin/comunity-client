@@ -12,7 +12,7 @@ class MyApp(App):
             cols=1,
             pos_hint={
                 'center_x': .5,
-                'center_y': .5},
+                'center_y': .9},
             size_hint=(None, None),
             spacing=20,
             width=200)

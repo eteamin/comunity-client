@@ -1,13 +1,19 @@
 import json
 from os import path
 
-from kivy.core.audio import SoundLoader
 from jnius import autoclass
 import websocket
 
-WS_SERVER = "ws://192.168.1.101:8282"
-PATH_TO_CONF = path.abspath(path.join(path.dirname(__file__), '..', 'configuration.json'))
 
+def parse_message(m):
+    split = m.split(':')
+    post_id, message = split[0], split[1]
+    return post_id, message
+
+
+WS_SERVER = "ws://192.168.43.150:8282"
+PATH_TO_CONF = path.abspath(path.join(path.dirname(__file__), '..', 'config', 'configuration.json'))
+OFFSET = 0
 
 Context = autoclass('android.content.Context')
 Intent = autoclass('android.content.Intent')
@@ -30,8 +36,11 @@ pendingIntent = PendingIntent.getActivity(service, 0, intent, 0)
 notification_builder.setContentIntent(pendingIntent)
 
 
-def on_message(ws, message):
-    print message
+def on_message(ws, m):
+    global OFFSET
+    OFFSET += 1 if OFFSET < 2 else -2
+    post_id, message = parse_message(m)
+    intent.putExtra(AndroidString("post_id".encode('utf-8')), AndroidString(post_id.encode('utf-8')))
     title = AndroidString("Community".encode('utf-8'))
     _message = AndroidString(message.encode('utf-8'))
 
@@ -40,10 +49,7 @@ def on_message(ws, message):
 
     notification_builder.setSmallIcon(icon)
     notification_builder.setAutoCancel(True)
-    notification_service.notify(0, notification_builder.build())
-    s = SoundLoader.load('notif.wav')
-    if s:
-        s.play()
+    notification_service.notify(OFFSET, notification_builder.build())
 
 
 def on_error(ws, error):

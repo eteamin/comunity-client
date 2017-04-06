@@ -22,7 +22,7 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.clock import Clock
 from kivy.utils import platform, get_color_from_hex
-
+from jnius import autoclass
 from drawer import NavigationDrawer
 from request_handler import *
 from helpers import normalize_tags, normalize_number, tell_time_ago, Alert, OverScrollEffect, server_url, find_step, \
@@ -485,7 +485,7 @@ class QuestionScreen(Screen, Common):
         )
         self.question_grid = GridLayout(
                 cols=1,
-                pos_hint={'center_x': .55, 'center_y': .8},
+                pos_hint={'center_x': .55, 'center_y': 0},
                 size_hint=(None, None),
                 spacing=dp(3),
                 width=self.question_container.width
@@ -504,7 +504,6 @@ class QuestionScreen(Screen, Common):
                     size=(self.ads_grid.width, self.ads_grid.height)
                 )
             self.ads_grid.add_widget(img)
-        self.body.add_widget(self.ads_container)
 
     def on_question_resp_ready(self, req, resp):
         with self.question_container.canvas.before:
@@ -534,7 +533,7 @@ class QuestionScreen(Screen, Common):
         title.text_size = self.question_grid.size[0], self.question_grid.size[1]
         description = Label(
             text=_question['description'],
-            pos_hint={'center_x': 0.55, 'center_y': 0.4},
+            pos_hint={'center_x': 0.55, 'center_y': 0.1},
             color=(0, 0, 0, 0.8),
             font_size=dp(15),
             size_hint_y=None
@@ -542,10 +541,9 @@ class QuestionScreen(Screen, Common):
         description.halign = 'left'
         description.valign = 'top'
         description.bind(texture_size=description.setter('size'))
-        description.text_size = self.question_grid.size[0], self.question_grid.size[1]
+        description.text_size[0] = self.question_grid.size[0]
         description.texture_update()
         self.question_grid.add_widget(description)
-        print description.texture_size
         #
         # # Handle tags
         # tags_container = BoxLayout(
@@ -571,16 +569,30 @@ class QuestionScreen(Screen, Common):
         #     tags_container.add_widget(tag)
         # self.question_container.add_widget(tags_container)
         # question_container.add_widget(Label(text=question['votes'], pos_hint={'center_x': 0.1, 'center_y': 0.5}))
+
+        self.meta_data = RelativeLayout(
+            size_hint=(None, None),
+            size=(self.question_grid.width, self.question_grid.height / 5)
+        )
+        self.question_grid.add_widget(self.meta_data)
         username = Label(
                 text=_question['accounts']['username'],
-                pos_hint={'center_x': 0.7},
+                pos_hint={'center_x': 0.9},
                 font_size=dp(15),
                 color=(0, 0.517, 0.705, 1)
             )
         username.halign = 'left'
         username.valign = 'top'
-        self.question_grid.add_widget(username)
+        self.meta_data.add_widget(username)
 
+        image = _question['accounts']['image']
+        user_image = AsyncImage(
+            source='{}{}.jpg'.format(image_storage, image) if image else 'statics/default.jpg',
+            pos_hint={'center_x': 0.75, 'center_y': 0.25},
+            size_hint=(None, None),
+            size=(Window.width / 7, Window.height / 7),
+        )
+        self.meta_data.add_widget(user_image)
         creation_date = Label(
                 text=_question['creation_date'],
                 pos_hint={'center_x': 0.65, 'center_y': 0.38},
@@ -589,8 +601,34 @@ class QuestionScreen(Screen, Common):
             )
         creation_date.halign = 'left'
         creation_date.valign = 'top'
-        self.question_grid.add_widget(creation_date)
+        self.meta_data.add_widget(creation_date)
+
+        self.comments_container = RelativeLayout(
+            size_hint=(None, None),
+            size=(Window.width / 4, Window.height)
+        )
+        self.comments_grid = GridLayout(
+            cols=1,
+            pos_hint={'center_x': 1.5, 'center_y': .7},
+            size_hint=(None, None),
+            spacing=dp(15),
+            width=self.question_grid.width
+        )
+        self.comments_grid.bind(minimum_height=self.comments_grid.setter('height'))
+        self.comments_container.add_widget(self.comments_grid)
+        self.question_grid.add_widget(self.comments_container)
+        comments = resp['comments']
+        for c in comments:
+            comment = Label(
+                text=c['description'],
+                color=(0, 0, 0, 0.8),
+            )
+            comment.halign = 'left'
+            comment.valign = 'top'
+            comment.text_size = self.comments_grid.size[0], self.comments_grid.size[1]
+            self.comments_grid.add_widget(comment)
         self.body.add_widget(self.question_container)
+        self.body.add_widget(self.ads_container)  # So ads will always be on the right
 
     def on_answers_resp_ready(self, resp):
         pass
@@ -1284,11 +1322,15 @@ class CommunityApp(App):
         return True
 
     def on_resume(self):
-        pass
+        intent = autoclass('org.kivy.android.PythonActivity').mActivity.getIntent()
+        post_id = intent.getExtras()
+        if post_id:
+            print post_id
+        else:
+            print None
 
     def build(self):
         if platform == 'android':
-            from jnius import autoclass
             activity = autoclass('org.kivy.android.PythonActivity').mActivity
             activity.removeLoadingScreen()
             service = autoclass('org.test.community.ServiceMyservice')

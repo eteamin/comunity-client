@@ -9,6 +9,7 @@ from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, Line
 from kivy.metrics import dp
 from kivy.graphics.texture import Texture
+from kivy.properties import ObjectProperty
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import AsyncImage, Image
@@ -22,11 +23,13 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.clock import Clock
 from kivy.utils import platform, get_color_from_hex
-from jnius import autoclass
 from drawer import NavigationDrawer
 from request_handler import *
 from helpers import normalize_tags, normalize_number, tell_time_ago, Alert, OverScrollEffect, server_url, find_step, \
         valid_email, valid_username, valid_password, image_storage
+
+if platform == 'android':
+    from jnius import autoclass
 
 me = None
 session = None
@@ -69,32 +72,110 @@ class SidePanel(Screen):
             body = GridLayout(cols=1, spacing=2, size_hint=(1, None), size=(Window.width, Window.height))
             body.bind(minimum_height=body.setter('height'))
             with body.canvas.before:
-                Color(0.956, 1, 1, 0.2)
+                Color(1, 1, 1, 0.99)
                 body.rect = Rectangle(size=(Window.width, Window.height), pos=body.pos)
             body.bind(pos=update_rect, size=update_rect)
             container = RelativeLayout()
 
             profile_picture = AsyncImage(
-                source='back.png',
+                source='statics/default.jpg',
                 pos_hint={'center_x': 0.5, 'center_y': 0.9},
                 size_hint=(None, None),
                 size=(Window.width / 5, Window.height / 5)
             )
             container.add_widget(profile_picture)
-            container.add_widget(Label(text=str(me['username']), pos_hint={'center_x': 0.5, 'center_y': 0.8}))
-            container.add_widget(Label(text=str(me['reputation']), pos_hint={'center_x': 0.3, 'center_y': 0.7}))
+            container.add_widget(
+                Label(
+                    text=str(me['username']),
+                    pos_hint={'center_x': 0.5, 'center_y': 0.8},
+                    color=(0, 0, 0, 1)
+                )
+            )
+            container.add_widget(
+                Label(
+                    text=str(me['reputation']),
+                    pos_hint={'center_x': 0.5, 'center_y': 0.7},
+                    color=(0, 0, 0, 1)
+                )
+            )
 
-            home = AsyncImage(
-                source='home.png',
+            home = Button(
+                text='Home',
+                halign='right',
+                background_normal='',
+                background_color=(0, 0.4, 0.9, 0.8),
                 pos_hint={'center_x': 0.2, 'center_y': 0.55},
                 size_hint=(None, None),
-                size=(Window.width / 15, Window.height / 15)
+                size=(body.width / 2, self.height / 2),
+                opacity=0.9
             )
-            self.add_widget(Label(
-                text='Home',
-                pos_hint={'center_x': 0.5, 'center_y': 0.55},
-            ))
+            home.halign = 'left'
+            home.valign = 'center'
+            home.text_size[0] = self.size[0] / 1.1
             container.add_widget(home)
+
+            ask = Button(
+                text='Ask Question',
+                halign='right',
+                background_normal='',
+                background_color=(0, 0.4, 0.9, 0.8),
+                pos_hint={'center_x': 0.2, 'center_y': 0.46},
+                size_hint=(None, None),
+                size=(body.width / 2, self.height / 2),
+                opacity=0.9
+            )
+            ask.halign = 'left'
+            ask.valign = 'center'
+            ask.text_size[0] = self.size[0] / 1.1
+            container.add_widget(ask)
+
+            notification = Button(
+                text='Notifications',
+                halign='right',
+                pos_hint={'center_x': 0.2, 'center_y': 0.37},
+                background_normal='',
+                background_color=(0, 0.4, 0.9, 0.8),
+                size_hint=(None, None),
+                size=(body.width / 2, self.height / 2),
+                opacity=0.9
+            )
+            notification.halign = 'left'
+            notification.valign = 'center'
+            notification.text_size[0] = self.size[0] / 1.1
+            notification.bind(on_press=partial(switch_to_screen, MainScreen, NotificationScreen, 'notifications'))
+            container.add_widget(notification)
+
+            about = Button(
+                text='About Us',
+                halign='right',
+                pos_hint={'center_x': 0.2, 'center_y': 0.28},
+                background_normal='',
+                background_color=(0, 0.4, 0.9, 0.8),
+                size_hint=(None, None),
+                size=(body.width / 2, self.height / 2),
+                opacity=0.9
+            )
+            about.halign = 'left'
+            about.valign = 'center'
+            about.text_size[0] = self.size[0] / 1.1
+            container.add_widget(about)
+
+            exit = Button(
+                text='Exit',
+                halign='right',
+                pos_hint={'center_x': 0.2, 'center_y': 0.19},
+                background_normal='',
+                background_color=(0.9, 0.3, 0, 0.8),
+                size_hint=(None, None),
+                size=(body.width / 2, self.height / 2),
+                opacity=0.9
+            )
+            exit.halign = 'left'
+            exit.valign = 'center'
+            exit.text_size[0] = self.size[0] / 1.1
+            exit.bind(on_press=partial(App.get_running_app().stop))
+            container.add_widget(exit)
+
             body.add_widget(container)
             # a = FileChooserIconView()
             # a.filters = ['*.png', '*.jpg', '*.jpeg']
@@ -124,7 +205,7 @@ class Common(RelativeLayout):
         self.toggle_button = Image(
             size_hint=(None, None),
             size=(header.width / 15, header.height),
-            source='statics/back.png',
+            source='statics/toggle.png',
             padding=(100, 100),
         )
         header.add_widget(self.toggle_button)
@@ -137,6 +218,7 @@ class Common(RelativeLayout):
             Color(1.0, 1.0, 1.0, 1)
             self.body.rect = Rectangle(size=(Window.width, Window.height), pos=self.body.pos)
             self.body.bind(minimum_height=self.body.setter('height'))
+
         self.body.bind(pos=update_rect, size=update_rect)
         scroll_view.add_widget(self.body)
         box_container.add_widget(header)
@@ -149,6 +231,11 @@ class Common(RelativeLayout):
         Window.add_widget(self.navigation_drawer)
 
 
+    def on_touch_down(self, touch):
+        if self.toggle_button.collide_point(*touch.pos):
+            self.navigation_drawer.toggle_state()
+
+
 class MainScreen(Screen, Common):
     def __init__(self, name):
         super(MainScreen, self).__init__(pagename='Main')
@@ -156,10 +243,6 @@ class MainScreen(Screen, Common):
         Clock.schedule_once(
             partial(insert_progress_bar, Window)) if progress_bar not in self.children else None
         get_questions(self.on_resp_ready, me['id'], session, _from, to, MainScreen)
-
-    def on_touch_down(self, touch):
-        if self.toggle_button.collide_point(*touch.pos):
-            self.navigation_drawer.toggle_state()
 
     def on_resp_ready(self, req, resp):
         for q in resp['questions']:
@@ -481,11 +564,11 @@ class QuestionScreen(Screen, Common):
 
         self.question_container = RelativeLayout(
             size_hint=(None, None),
-            size=(Window.width / 1.5, Window.height)
+            size=(Window.width / 1.5, Window.height / 1.5)
         )
         self.question_grid = GridLayout(
                 cols=1,
-                pos_hint={'center_x': .55, 'center_y': 0},
+                pos_hint={'center_x': .55, 'center_y': 0.2},
                 size_hint=(None, None),
                 spacing=dp(3),
                 width=self.question_container.width
@@ -523,7 +606,6 @@ class QuestionScreen(Screen, Common):
         title = Label(
             text=_question['title'],
             markup=True,
-            pos_hint={'center_x': 0.55, 'center_y': 0.48},
             color=(0, 0, 0, 1),
             font_size=dp(17),
         )
@@ -531,9 +613,9 @@ class QuestionScreen(Screen, Common):
         title.valign = 'top'
         self.question_grid.add_widget(title)
         title.text_size = self.question_grid.size[0], self.question_grid.size[1]
+        title.texture_update()
         description = Label(
             text=_question['description'],
-            pos_hint={'center_x': 0.55, 'center_y': 0.1},
             color=(0, 0, 0, 0.8),
             font_size=dp(15),
             size_hint_y=None
@@ -674,22 +756,22 @@ class QuestionScreen(Screen, Common):
             self.answer_text = value
 
 
-class NotificationScreen(Screen):
-    def __init__(self):
-        super(NotificationScreen, self).__init__()
+class NotificationScreen(Screen, Common):
+    def __init__(self, name):
+        super(NotificationScreen, self).__init__(pagename='notifications')
 
-        root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
-        body = GridLayout(cols=1, spacing=2, size_hint_y=None)
-        body.bind(minimum_height=body.setter('height'))
-        for n in get_notifications(me['id']):
-            container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 10))
-            content = Label(text='[ref=%s]%s[/ref]' % (n['content'], n['content']), markup=True)
-            content.bind(on_ref_press=partial(self.select_notification, n))
-            container.add_widget(content)
-            container.add_widget(Label(text=n['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
-            body.add_widget(container)
-        root.add_widget(body)
-        self.add_widget(root)
+        # root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
+        # body = GridLayout(cols=1, spacing=2, size_hint_y=None)
+        # body.bind(minimum_height=body.setter('height'))
+        # for n in get_notifications(me['id']):
+        #     container = RelativeLayout(size_hint=(1, None), size=(Window.width, Window.height / 10))
+        #     content = Label(text='[ref=%s]%s[/ref]' % (n['content'], n['content']), markup=True)
+        #     content.bind(on_ref_press=partial(self.select_notification, n))
+        #     container.add_widget(content)
+        #     container.add_widget(Label(text=n['creation_time'], pos_hint={'center_x': 0.8, 'center_y': 0.1}))
+        #     body.add_widget(container)
+        # root.add_widget(body)
+        # self.add_widget(root)
 
     @staticmethod
     def select_notification(self, *args):
@@ -1219,7 +1301,6 @@ def switch_to_screen(*args):
     if issubclass(s_obj, Screen):
         screen_manager.clear_widgets()
         screen_manager.add_widget(s_obj(name=s_name)) if s_name not in screen_manager.screen_names else None
-        screen_manager.current = s_name
     print screen_manager.children
 
 
@@ -1322,12 +1403,13 @@ class CommunityApp(App):
         return True
 
     def on_resume(self):
-        intent = autoclass('org.kivy.android.PythonActivity').mActivity.getIntent()
-        post_id = intent.getExtras()
-        if post_id:
-            print post_id
-        else:
-            print None
+        if platform == 'android':
+            intent = autoclass('org.kivy.android.PythonActivity').mActivity.getIntent()
+            post_id = intent.getExtras()
+            if post_id:
+                print post_id
+            else:
+                print None
 
     def build(self):
         if platform == 'android':

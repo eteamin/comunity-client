@@ -1,5 +1,6 @@
 import json
 from os import path
+from random import randint
 
 from jnius import autoclass
 import websocket
@@ -32,15 +33,18 @@ java_class = service.getClass()
 intent = Intent(service, PythonActivity)
 intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
 
-pendingIntent = PendingIntent.getActivity(service, 0, intent, 0)
-notification_builder.setContentIntent(pendingIntent)
-
 
 def on_message(ws, m):
+    print m
     global OFFSET
     OFFSET += 1 if OFFSET < 2 else -2
     post_id, message = parse_message(m)
     intent.putExtra(AndroidString("post_id".encode('utf-8')), AndroidString(post_id.encode('utf-8')))
+    intent.setAction("{}{}".format(post_id, randint(1, 10000)))
+
+    pendingIntent = PendingIntent.getActivity(service, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+    notification_builder.setContentIntent(pendingIntent)
+
     title = AndroidString("Community".encode('utf-8'))
     _message = AndroidString(message.encode('utf-8'))
 

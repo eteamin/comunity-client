@@ -7,7 +7,7 @@ from kivy.core.window import Window
 
 class Alert(Popup):
 
-    def __init__(self, title, text, button_text, action=None):
+    def __init__(self, title, text, button_text, action=None, *args):
         super(Alert, self).__init__()
         self.action = action
         content = AnchorLayout(anchor_x='center', anchor_y='bottom')

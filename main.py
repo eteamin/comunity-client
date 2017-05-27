@@ -230,7 +230,6 @@ class Common(RelativeLayout):
         self.navigation_drawer.add_widget(box_container)
         Window.add_widget(self.navigation_drawer)
 
-
     def on_touch_down(self, touch):
         if self.toggle_button.collide_point(*touch.pos):
             self.navigation_drawer.toggle_state()
